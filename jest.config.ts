@@ -20,7 +20,7 @@ export default {
     // Define module path aliases from tsconfig.json
     '@server(.*)$': `${rootDirector}/src$1`,
     '@config(.*)$': `${rootDirector}/src/config$1`,
-    '@tests(.*)$': `${rootDirector}/tests$1`,
+    '@tests(.*)$': `${rootDirector}/test$1`,
     '@domain(.*)$': `${rootDirector}/src/domain$1`,
     '@controller(.*)$': `${rootDirector}/src/controller$1`,
     '@middleware(.*)$': `${rootDirector}/src/middleware$1`,
@@ -37,12 +37,12 @@ export default {
   ],
   rootDir: rootDirector,
   roots: [rootDirector],
-  setupFilesAfterEnv: [`${rootDirector}/tests/setup.ts`],
+  setupFilesAfterEnv: [`${rootDirector}/test/setup.ts`],
   testPathIgnorePatterns: [
     '/node_modules/',
     '<rootDir>/build',
-    `${rootDirector}/tests/fixtures`,
-    `${rootDirector}/tests/setup.ts`,
+    `${rootDirector}/test/fixtures`,
+    `${rootDirector}/test/setup.ts`,
   ],
   transform: {
     // Define filename patterns for testing frameworks
@@ -50,5 +50,5 @@ export default {
       tsconfig: path.resolve(__dirname, 'tsconfig.json'),
     }],
   },
-  testRegex: ['((/tests/.*)|(\\.|/)(test|spec))\\.tsx?$'], // Define test file syntax
+  testRegex: ['((/test/.*)|(\\.|/)(test|spec))\\.tsx?$'], // Define test file syntax
 };

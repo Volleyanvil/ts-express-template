@@ -22,13 +22,13 @@
     "baseUrl": ".",
     "paths": {
       "@server/*": ["src/*"],
-      "@tests/*": ["tests/*"],
+      "@tests/*": ["test/*"],
       "@config/*": ["src/config/*"],
       "@domain/*": ["src/domain/*"],
       "@controller/*": ["src/controller/*"],
       "@middleware/*": ["src/middleware/*"]
     }
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
 }

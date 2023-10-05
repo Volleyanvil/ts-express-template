@@ -4,11 +4,13 @@ import { Server } from 'net';
 
 console.log('process.version', process.version);
 
+// NOTE: Unit testing an index file that only launches the server is largely unnecessary
+
 describe('Index', () => {
   it('should work', async () => {
     const listen = jest.spyOn(Server.prototype, 'listen');
 
-    jest.mock('@config/express', () => ({
+    jest.mock('@config/express.config', () => ({
       createServer: jest.fn().mockReturnValue(express()),
     }));
 

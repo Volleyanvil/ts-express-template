@@ -13,7 +13,7 @@ const createServer = (): express.Application => {
     app.disable('x-powered-by');
 
     app.get('/health', (_req, res) => {
-        res.send('UP');
+        res.status(200).send('UP');
     });
 
     return app;

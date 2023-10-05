@@ -9,7 +9,7 @@ moduleAlias.addAliases({
 });
 import 'dotenv/config';
 
-import { createServer } from '@config/express';
+import { createServer } from '@config/express.config';
 import { logger } from '@config/logger.config'
 import { AddressInfo } from 'net';
 import http from 'http';
