@@ -1,0 +1,4 @@
+# Ignore build directory
+dist
+# Ignore coverage reports
+coverage
