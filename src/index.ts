@@ -1,5 +1,5 @@
 import * as moduleAlias from 'module-alias';
-const sourcePath = process.env.NODE_ENV === 'development' ? 'src' : __dirname;
+const sourcePath = process.env.NODE_ENV !== 'production' ? 'src' : __dirname;
 moduleAlias.addAliases({
   '@server': sourcePath,
   '@config': `${sourcePath}/config`,
@@ -7,9 +7,7 @@ moduleAlias.addAliases({
   '@controller': `${sourcePath}/controller`,
   '@middleware': `${sourcePath}/middleware`,
 });
-if (process.env.NODE_ENV === 'development') {
-  require('dotenv').config();
-}
+import 'dotenv/config';
 
 import { createServer } from '@config/express';
 import { AddressInfo } from 'net';
@@ -23,7 +21,7 @@ const startServer =async () => {
   const server = http.createServer(app).listen({ host, port }, () => {
     const addressInfo = server.address() as AddressInfo;
     console.log(
-      `Listening to HTTP server at http://${addressInfo.address}:${addressInfo.port}`
+      `HTTP server ready at http://${addressInfo.address}:${addressInfo.port}`
     );
   });
 
