@@ -5,6 +5,10 @@ A repository template for ExpressJS projects using TypeScrtipt. Pre-configured w
 
 **Included tools and configurations**
 - TypeScript (v 5.2)
+- Eslint
+- Prettier
+- Jest
+- Jenkins
 
 
 ## Getting Started
