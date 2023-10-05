@@ -127,3 +127,6 @@ dist
 
 # Ignore build files
 dist/
+
+# Ignore test reports
+*report.html
