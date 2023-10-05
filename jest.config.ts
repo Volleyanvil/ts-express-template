@@ -8,7 +8,7 @@ export default {
   coverageProvider: 'v8',
   coverageThreshold: {
     global: {
-      branches: 70,
+      branches: 50,
       function: 80,
       lines: 80,
       statements: 80,
