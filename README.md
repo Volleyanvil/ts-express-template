@@ -1,5 +1,5 @@
 # ts-express-template
-This repository is intended to be used as a template for similar projects.
+*Based on Create Your Own TypeScript Express Template Series by Dantis Mai.* [(link)](https://dev.to/maithanhdanh/series/14378)
 
 A repository template for ExpressJS projects using TypeScrtipt. Pre-configured with a range of tools and integrations.
 
