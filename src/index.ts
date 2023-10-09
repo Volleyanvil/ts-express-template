@@ -1,11 +1,11 @@
 import http from 'http';
-import * as moduleAlias from 'module-alias';
-
 import { ENV, HOST, PORT } from '@config/environment.config';
 import { createServer } from '@config/express.config';
 import { logger } from '@config/logger.config'
 import { AddressInfo } from 'net';
 
+// Add module aliases programmatically
+import * as moduleAlias from 'module-alias';
 const sourcePath = ENV !== 'production' ? 'src' : __dirname;
 moduleAlias.addAliases({
   '@server': sourcePath,
@@ -15,12 +15,9 @@ moduleAlias.addAliases({
   '@middleware': `${sourcePath}/middleware`,
 });
 
-const host = HOST;
-const port = PORT;
-
 const startServer = async () => {
   const app = await createServer();
-  const server = http.createServer(app).listen({ host, port }, () => {
+  const server = http.createServer(app).listen({ host: HOST, port: PORT }, () => {
     const addressInfo = server.address() as AddressInfo;
     logger.log({ 
       level: 'info', 
