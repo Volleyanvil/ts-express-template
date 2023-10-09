@@ -1,14 +1,12 @@
 import { createLogger, format, transports, Logger as WinstonLogger } from 'winston';
 const { combine, timestamp, label, printf } = format;
-import 'dotenv/config';
+import { LOGS_PATH } from '@config/environment.config';
 
 // Winston docs: https://github.com/winstonjs/winston#usage
 
 const customFormat = printf(({ level, message, label, timestamp }) => {
   return `${timestamp as string} [${label}] ${level.toUpperCase()}: ${message}`;
 });
-
-const logPath: string = process.env.LOGS_PATH;
 
 const LoggerWrapper = (): WinstonLogger => {
   const logger: WinstonLogger = createLogger({
@@ -22,10 +20,10 @@ const LoggerWrapper = (): WinstonLogger => {
     // silent: false,
     transports: [
       new transports.File({ 
-        filename: `${logPath}/error.log`,
+        filename: `${LOGS_PATH}/error.log`,
         level: 'error'
       }),
-      new transports.File({ filename: `${logPath}/combined.log` }),
+      new transports.File({ filename: `${LOGS_PATH}/combined.log` }),
     ]
   });
 
