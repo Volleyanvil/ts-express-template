@@ -1,5 +1,12 @@
+import http from 'http';
 import * as moduleAlias from 'module-alias';
-const sourcePath = process.env.NODE_ENV !== 'production' ? 'src' : __dirname;
+
+import { ENV, HOST, PORT } from '@config/environment.config';
+import { createServer } from '@config/express.config';
+import { logger } from '@config/logger.config'
+import { AddressInfo } from 'net';
+
+const sourcePath = ENV !== 'production' ? 'src' : __dirname;
 moduleAlias.addAliases({
   '@server': sourcePath,
   '@config': `${sourcePath}/config`,
@@ -7,15 +14,9 @@ moduleAlias.addAliases({
   '@controller': `${sourcePath}/controller`,
   '@middleware': `${sourcePath}/middleware`,
 });
-import 'dotenv/config';
 
-import { createServer } from '@config/express.config';
-import { logger } from '@config/logger.config'
-import { AddressInfo } from 'net';
-import http from 'http';
-
-const host = process.env.HOST;
-const port = process.env.PORT;
+const host = HOST;
+const port = PORT;
 
 const startServer = async () => {
   const app = await createServer();
