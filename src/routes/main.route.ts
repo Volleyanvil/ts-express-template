@@ -9,10 +9,3 @@ export class MainRouter {
     router = Router();
     private controller = new MainController();
 }
-
-export const mainRouter = Router();
-const mainController = new MainController();
-
-mainRouter.route('/').get(mainController.getMainPage);
-
-mainRouter.route('/health').get(mainController.getHealth);

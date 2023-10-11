@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 
-import { MainRouter } from '@routes/main.router';
+import { MainRouter } from '@routes/main.route';
 
 const createServer = (): express.Application => {
     const app = express();
