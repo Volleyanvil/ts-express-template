@@ -21,9 +21,9 @@ export default {
     '@server(.*)$': `${rootDirector}/src$1`,
     '@config(.*)$': `${rootDirector}/src/config$1`,
     '@tests(.*)$': `${rootDirector}/test$1`,
-    '@domain(.*)$': `${rootDirector}/src/domain$1`,
-    '@controller(.*)$': `${rootDirector}/src/controller$1`,
-    '@middleware(.*)$': `${rootDirector}/src/middleware$1`,
+    '@routes(.*)$': `${rootDirector}/src/routes$1`,
+    '@controllers(.*)$': `${rootDirector}/src/controllers$1`,
+    '@middlewares(.*)$': `${rootDirector}/src/middlewares$1`,
   },
   reporters: [
     'default',
