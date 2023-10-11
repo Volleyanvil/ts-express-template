@@ -33,14 +33,4 @@ describe('Index', () => {
     });
     listen.mockRestore();
   });
-
-  /*
-  it('should work', async () => {
-    process.env.PORT = 'abc';
-    const mockExit = jest.spyOn(process, 'exit').mockImplementation();
-
-    await import('@server/index');
-    expect(mockExit).toHaveBeenCalledWith(0);
-  });
-  */
 });

@@ -10,9 +10,9 @@ const sourcePath = ENV !== 'production' ? 'src' : __dirname;
 moduleAlias.addAliases({
   '@server': sourcePath,
   '@config': `${sourcePath}/config`,
-  '@domain': `${sourcePath}/domain`,
-  '@controller': `${sourcePath}/controller`,
-  '@middleware': `${sourcePath}/middleware`,
+  '@routes': `${sourcePath}/routes`,
+  '@controllers': `${sourcePath}/controllers`,
+  '@middleware': `${sourcePath}/middlewares`,
 });
 
 const startServer = async () => {
