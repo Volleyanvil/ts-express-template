@@ -130,3 +130,6 @@ dist/
 
 # Ignore test reports
 *report.html
+
+# Ignore VSCode settings
+.vscode/

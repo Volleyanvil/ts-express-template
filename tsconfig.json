@@ -24,9 +24,9 @@
       "@server/*": ["src/*"],
       "@tests/*": ["test/*"],
       "@config/*": ["src/config/*"],
-      "@domain/*": ["src/domain/*"],
-      "@controller/*": ["src/controller/*"],
-      "@middleware/*": ["src/middleware/*"]
+      "@routes/*": ["src/routes/*"],
+      "@controllers/*": ["src/controllers/*"],
+      "@middlewares/*": ["src/middlewares/*"]
     }
   },
   "include": ["src/**/*", "test/**/*"],
