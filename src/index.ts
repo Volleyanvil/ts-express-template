@@ -1,8 +1,9 @@
 import http from 'http';
-import { ENV, HOST, PORT } from '@config/environment.config';
+import { ENV, HOST, PORT, MONGODB_URI } from '@config/environment.config';
 import { createServer } from '@config/express.config';
 import { logger } from '@config/logger.config'
 import { AddressInfo } from 'net';
+import { DB } from '@config/database.config';
 
 // Add module aliases programmatically
 import * as moduleAlias from 'module-alias';
@@ -16,6 +17,7 @@ moduleAlias.addAliases({
 });
 
 const startServer = async () => {
+  DB.connect(MONGODB_URI);
   const app = await createServer();
   const server = http.createServer(app).listen({ host: HOST, port: PORT }, () => {
     const addressInfo = server.address() as AddressInfo;

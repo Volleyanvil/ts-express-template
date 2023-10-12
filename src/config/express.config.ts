@@ -14,12 +14,6 @@ const createServer = (): express.Application => {
     // Disable X-Powered-By HTTP response header
     app.disable('x-powered-by');
 
-    /*
-    app.get('/health', (_req, res) => {
-        res.status(200).send('UP');
-    });
-    */
-
     app.use('', new MainRouter().router);
 
     return app;
