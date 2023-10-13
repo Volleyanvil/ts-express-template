@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 
 import { MainRouter } from '@routes/main.route';
+import { UserRouter } from '@routes/user.route';
 
 const createServer = (): express.Application => {
     const app = express();
@@ -15,6 +16,7 @@ const createServer = (): express.Application => {
     app.disable('x-powered-by');
 
     app.use('', new MainRouter().router);
+    app.use('/user', new UserRouter().router);
 
     return app;
 };

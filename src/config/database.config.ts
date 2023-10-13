@@ -5,10 +5,10 @@ class Database {
   constructor () {}
 
   // TODO: Connection options / config
-  static connect( uri: string/*, options?: */ ) {
+  static async connect( uri: string/*, options?: */ ) {
     connectMongoose(uri)
     .then( () => {
-      logger.log({level: 'info', message: `Connected to MongoDB using URU ${uri}`, label: 'SERVER'})
+      logger.log({level: 'info', message: `Connected to MongoDB using URI ${uri}`, label: 'SERVER'})
     })
     .catch( (error: Error) => {
       logger.log({level: 'debug', message: `DB Error - ${error.message}`});

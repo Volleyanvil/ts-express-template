@@ -40,12 +40,12 @@ export const EnvironmentWrapper = (): IEnvironment => {
 
   const LOGS_PATH: string = process.env.LOGS_PATH || 'logs';
 
-  const MONGODB_URI: string = process.env.MONGODB_URI || 'mongodb://localhost:27017/explate'
   const mongo_rx = /^mongodb:\/\/.*\/.*$/;
-  if ( MONGODB_URI && !( mongo_rx.test(MONGODB_URI) ) ) {
+  if ( process.env.MONGODV_URI && !( mongo_rx.test(process.env.MONGODB_URI) ) ) {
       console.log('MONGODB_URI value is invalid.');
       process.exit(1);
   }
+  const MONGODB_URI: string = process.env.MONGODB_URI || 'mongodb://localhost:27017/explate'
   const MONGODB_USER: string = process.env.MONGODB_USER;
   const MONGODB_PWD: string = process.env.MONGODB_PWD;
 

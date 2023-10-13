@@ -14,6 +14,7 @@ moduleAlias.addAliases({
   '@routes': `${sourcePath}/routes`,
   '@controllers': `${sourcePath}/controllers`,
   '@middleware': `${sourcePath}/middlewares`,
+  '@models': `${sourcePath}/models`,
 });
 
 const startServer = async () => {
