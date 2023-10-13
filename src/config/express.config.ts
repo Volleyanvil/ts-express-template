@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 
 import { MainRouter } from '@routes/main.route';
+import { UserRouter } from '@routes/user.route';
 
 const createServer = (): express.Application => {
     const app = express();
@@ -14,13 +15,8 @@ const createServer = (): express.Application => {
     // Disable X-Powered-By HTTP response header
     app.disable('x-powered-by');
 
-    /*
-    app.get('/health', (_req, res) => {
-        res.status(200).send('UP');
-    });
-    */
-
     app.use('', new MainRouter().router);
+    app.use('/user', new UserRouter().router);
 
     return app;
 };

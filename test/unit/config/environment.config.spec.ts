@@ -41,13 +41,13 @@ describe('Environment', () => {
     process.env.PORT = 'abc';
     const mockExit = jest.spyOn(process, 'exit').mockImplementation();
     EnvironmentWrapper();
-    expect(mockExit).toHaveBeenCalledWith(0);
+    expect(mockExit).toHaveBeenCalledWith(1);
   });
 
   it('Should exit with 0, Bad host', async () => {
     process.env.HOST = 'library';
     const mockExit = jest.spyOn(process, 'exit').mockImplementation();
     EnvironmentWrapper();
-    expect(mockExit).toHaveBeenCalledWith(0);
+    expect(mockExit).toHaveBeenCalledWith(1);
   });
 });

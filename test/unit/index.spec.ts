@@ -13,6 +13,7 @@ describe('Index', () => {
     process.env.NODE_ENV = ENV.NODE_ENV;
     process.env.HOST = '0.0.0.0';
     process.env.PORT = '8000';
+    process.env.MONGODB_URI='mongodb://localhost/test'
   });
   afterAll(() => {
     process.env = ENV;
