@@ -19,10 +19,10 @@ export class AuthRouter {
       .post(this.controller.refreshToken);
 
     this.router.route('/reset-password')
-      .post();
+      .get();
 
     this.router.route('/confirm-email')
-      .post();
+      .patch(this.controller.verifyEmail);
   }
 
   router = Router();
