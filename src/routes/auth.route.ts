@@ -16,10 +16,10 @@ export class AuthRouter {
       .post(this.controller.logout);
   
     this.router.route('/refresh-token')
-      .post(this.controller.refreshToken);
+      .post(this.controller.refresh);
 
     this.router.route('/reset-password')
-      .get();
+      .get(this.controller.resetPassword);
 
     this.router.route('/confirm-email')
       .patch(this.controller.verifyEmail);

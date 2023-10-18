@@ -1,27 +1,90 @@
 import { Request, Response } from 'express';
-// import * as mongoose from 'mongoose';
+import { HydratedDocument, Error as MongooseError } from 'mongoose';
 
-// import * as Jwt from 'jwt-simple';
-
-// import { User } from '@server/models/user.schema';
+import { User, IUser } from '@server/models/user.schema';
+import { AuthService } from '@services/auth.service';
+import { RefreshToken } from '@models/refresh-token.schema';
 
 
 export class AuthController {
-  async register() {
-    // Creates and authenticates new user
-  }
-  async login() {
-    // Authenticate user with credentials
-  }
-  async logout(_req: Request, res: Response) {
-    // Generate new access token against a refresh token, rotate refresh token.
 
-    // Check that provided tokens are valid
-    // Revoke refresh token family.
-
-    res.status(200).send('Logout has not been implemented');
+  // Creates and authenticates new user
+  async register(req: Request, res: Response) {
+    const newUser: HydratedDocument<IUser> = new User(req.body)
+    try {
+      await newUser.save()
+      const accessToken = await this.authService.generateAccessToken(newUser);
+      const refreshToken = await this.authService.generateRefreshToken(newUser);
+      res.status(201)
+      .cookie('refreshToken', refreshToken.token, {
+        httpOnly: true, 
+        expires: refreshToken.token_expires, 
+        secure: true, 
+        path: '/auth'
+      })
+      .json({ user: newUser, accessToken: accessToken });
+    } catch (err) {
+      // TODO: Move error handling to dedicated middleware
+      if (err instanceof MongooseError.ValidationError) {
+        // https://mongoosejs.com/docs/api/error.html#Error.ValidationError
+        const error = err as MongooseError.ValidationError;
+        const errors = {};
+        Object.keys(error.errors).forEach((key) => {
+          errors[key] = error.errors[key].message;
+        })
+        console.log(err.name, ' - ', err.errors);
+        res.status(400).json(errors);
+      } else if (err instanceof Error) {
+        const error = err as Error;
+        console.log(error.name, ' - ', error.message);
+        res.status(500).json({message: error.message});
+      } else {
+        console.log('Unkown error: ', err);
+      }
+    }
   }
-  async refreshToken(_req: Request, res: Response) {
+
+  // Authenticate user with credentials
+  async login(req: Request, res: Response) {
+    const {username, email, password } = req.body;
+
+    if (!username && !email) res.status(400).send({message: 'A username or email is required to login'});
+    if (!password) res.status(400).send({message: 'A password is required to login'});
+
+    const user = await User.findOne({$or: [
+      {username: username},
+      {email: email}
+    ]}).exec();
+
+    if (!user) {    // User not found
+      res.status(400).send({mesage: 'Please check that the username or email is correct'});
+    } else if (password && user.checkPassword(password)) {  // Password does not match
+      res.status(400).send({message: 'Incorrect username/email or password'});
+    }
+
+    const accessToken = await this.authService.generateAccessToken(user);
+    const refreshToken = await this.authService.generateRefreshToken(user);
+    res.status(200)
+    .cookie('refreshToken', refreshToken.token, {
+      httpOnly: true, 
+      expires: refreshToken.token_expires, 
+      secure: true, 
+      path: '/auth'
+    })
+    .json({ user: user, accessToken: accessToken });
+  }
+
+  async logout(req: Request, res: Response) {
+    // TODO?: Verify that requesting user matches RT owner
+
+    if (!req.cookies.refreshToken) res.status(400).json({message: 'Nothing to revoke'});
+    const refreshToken = await RefreshToken.findOne({token: req.cookies.refreshToken}).exec();
+    if (!refreshToken) res.status(400).json({message: 'Invalid refresh token'});
+    await this.authService.revokeRefreshTokens(refreshToken);
+    res.status(200).json({message: 'Logged out successfully'});
+  }
+
+  async refresh(_req: Request, res: Response) {
     // Generate new access token against a refresh token, rotate refresh token.
 
     // Find and validate provided refresh token
@@ -49,24 +112,6 @@ export class AuthController {
     // Verify user's email address
     res.status(200).send('Email verification has not yet been implemented.');
   }
+
+  private authService = new AuthService();
 }
-
-/*
-    // Find user mathching provided credentials and provides a token
-    const {username, email, password } = req.body;
-
-    if (!username && !email) res.status(400).send({message: 'A username or email is required to login'});
-    if (!password) res.status(400).send({message: 'A password must be specified to login'});
-
-    const user = await User.findOne({$or: [
-      {username: username},
-      {email: email}
-    ]});
-
-    if (!user) {    // User not found
-      res.status(400).send({mesage: 'Please check that the username or email is correct'});
-    } else if (password && user.checkPassword(password)) {  // Password does not match
-      res.status(400).send({message: 'Incorrect username/email or password'});
-    }
-    res.locals.data = {};
-*/
