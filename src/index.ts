@@ -15,9 +15,11 @@ moduleAlias.addAliases({
   '@controllers': `${sourcePath}/controllers`,
   '@middleware': `${sourcePath}/middlewares`,
   '@models': `${sourcePath}/models`,
+  '@services': `${sourcePath}/services`,
 });
 
 const startServer = async () => {
+
   DB.connect(MONGODB_URI);
   const app = await createServer();
   const server = http.createServer(app).listen({ host: HOST, port: PORT }, () => {
