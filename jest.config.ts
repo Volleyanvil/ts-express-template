@@ -25,6 +25,7 @@ export default {
     '@controllers(.*)$': `${rootDirector}/src/controllers$1`,
     '@middlewares(.*)$': `${rootDirector}/src/middlewares$1`,
     '@models(.*)$': `${rootDirector}/src/models$1`,
+    '@services(.*)$': `${rootDirector}/src/services$1`,
   },
   reporters: [
     'default',
