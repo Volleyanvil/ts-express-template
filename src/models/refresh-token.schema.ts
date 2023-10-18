@@ -32,7 +32,7 @@ import { Schema, model, Types } from 'mongoose';
  *   * httpOnly cookies should be used by default, and local storage when a trusted client can be verified.
  */
 
-interface IRefreshToken {
+export interface IRefreshToken {
   token: string,
   user: Types.ObjectId,
   token_used: boolean,

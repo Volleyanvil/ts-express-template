@@ -11,7 +11,7 @@ enum STATUS {
   verified = 'verified',
 }
 
-interface IUser {
+export interface IUser {
   username: string,
   firstName?: string,
   lastName?: string,
