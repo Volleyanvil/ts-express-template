@@ -5,7 +5,7 @@ describe('Environment', () => {
   beforeEach(() => {
     jest.resetModules();
     process.env = { ...ENV };
-    process.env.NODE_ENV = 'test';
+    process.env.NODE_ENV = ENV.NODE_ENV;
   });
   afterEach(() => {
     jest.restoreAllMocks();
