@@ -35,8 +35,8 @@ import { Schema, model, Types } from 'mongoose';
 export interface IRefreshToken {
   token: string,
   user: Types.ObjectId,
-  token_used: boolean,
-  token_expires: Date,
+  isUsed: boolean,
+  expires: Date,
   family_expires: Date,
   family_root: string,
 }
@@ -44,8 +44,8 @@ export interface IRefreshToken {
 const RefreshTokenSchema = new Schema<IRefreshToken>({
   token: { type: String, required: true, unique: true },
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  token_used: { type: Boolean, default: false },
-  token_expires: { type: Date, required: true },
+  isUsed: { type: Boolean, default: false },
+  expires: { type: Date, required: true },
   family_expires: { type: Date, required: true },
   family_root: { type: String, default: undefined }
 },
