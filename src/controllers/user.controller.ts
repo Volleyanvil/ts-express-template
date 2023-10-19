@@ -1,21 +1,9 @@
 import { Request, Response } from 'express';
-import { UserSchema } from '@models/user.schema';
-import * as mongoose from 'mongoose';
+import { User } from '@models/user.schema';
 
 // TODO: Request specific interfaces/dtos for ease of use & validation
 //
 // TODO: Request content validation (middleware?) for create, update methods
-
-const User = mongoose.model('User', UserSchema);
-
-/*
-const user = new User({
-  username: 'tester',
-  email: 'tester@test.com',
-  password: 'passWORD123a',
-});
-user.save();
-*/
 
 export class UserController {
 

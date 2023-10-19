@@ -28,6 +28,7 @@
       "@controllers/*": ["src/controllers/*"],
       "@middlewares/*": ["src/middlewares/*"],
       "@models/*": ["src/models/*"],
+      "@services/*": ["src/services/*"],
     }
   },
   "include": ["src/**/*", "test/**/*"],

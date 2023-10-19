@@ -8,6 +8,7 @@ const customFormat = printf(({ level, message, label, timestamp }) => {
   return `${timestamp as string} [${label}] ${level.toUpperCase()}: ${message}`;
 });
 
+// TODO: Adopt singleton pattern for logger https://en.wikipedia.org/wiki/Singleton_pattern
 const LoggerWrapper = (): WinstonLogger => {
   const logger: WinstonLogger = createLogger({
     level: 'info',
