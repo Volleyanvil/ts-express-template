@@ -7,7 +7,7 @@ import { IRefreshToken, RefreshToken } from '@models/refresh-token.schema';
 
 export class AuthService {
 
-  async generateAccessToken (user: HydratedDocument<IUser>) {
+  async generateAccessToken (user: HydratedDocument<IUser>): Promise<string> {
     // https://github.com/hokaccha/node-jwt-simple#readme
     const secretKey = process.env.ACCESS_TOKEN_SECRET;  // Import env variable from environment.config instead
     const alg = process.env.ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
@@ -24,9 +24,9 @@ export class AuthService {
     return Jwt.encode(tokenPayload, secretKey, alg)
   }
 
-  async generateRefreshToken(user: HydratedDocument<IUser>, rToken?: HydratedDocument<IRefreshToken>) {
-    // TODO: Add Auth env var handling to environment.config
-    // NOTE: Could also use unique random string as token, since details are stored in DB
+  async generateRefreshToken(user: HydratedDocument<IUser>, rToken?: HydratedDocument<IRefreshToken>): Promise<HydratedDocument<IRefreshToken>> {
+    // TODO: Handle auth-related env variables in environment.config and import here
+    // NOTE: RT details are stored in DB. Tokens can also be random, hard-to-guess strings.
 
     const secretKey = process.env.REFRESH_TOKEN_SECRET; 
     const alg = process.env.ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
@@ -53,7 +53,7 @@ export class AuthService {
   }
 
   // Rotates refresh token and returns new tokens (AT & RT) or throws
-  async tokenRotation(user: HydratedDocument<IUser>, oldToken: HydratedDocument<IRefreshToken>) {
+  async tokenRotation(user: HydratedDocument<IUser>, oldToken: HydratedDocument<IRefreshToken>): Promise<{ newAToken: string, newRToken: HydratedDocument<IRefreshToken> }> {
     // Check for token reuse
     if (oldToken.token_used) {
       this.revokeRefreshTokens(oldToken);
@@ -71,10 +71,11 @@ export class AuthService {
     return { newAToken, newRToken };
   }
 
-  // Revokes a refresh token family, returns nothing or throws
-  async revokeRefreshTokens(refreshToken: HydratedDocument<IRefreshToken>) {
-    // Revoke a token family
+  // Revokes a refresh token family, returns number of deleted documents.
+  async revokeRefreshTokens(refreshToken: HydratedDocument<IRefreshToken>): Promise<number> {
     const deleted = await RefreshToken.deleteMany({ family_root: refreshToken.family_root});
-    if (deleted.deletedCount === 0) throw new Error('Refresh Token not found');
+    // Disabled 'not found' errors in services. ID-based revokation and logout may handle errors differently.
+    // if (deleted.deletedCount === 0) throw new Error('Refresh Token not found');
+    return deleted.deletedCount;
   }
 }
