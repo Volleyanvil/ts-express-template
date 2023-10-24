@@ -1,7 +1,7 @@
 import http from 'http';
 import { ENV, HOST, PORT, MONGODB_URI } from '@config/environment.config';
 import { createServer } from '@config/express.config';
-import { logger } from '@config/logger.config'
+import { Logger } from '@config/logger.config'
 import { AddressInfo } from 'net';
 import { DB } from '@config/database.config';
 
@@ -24,7 +24,7 @@ const startServer = async () => {
   const app = await createServer();
   const server = http.createServer(app).listen({ host: HOST, port: PORT }, () => {
     const addressInfo = server.address() as AddressInfo;
-    logger.log({ 
+    Logger.log({ 
       level: 'info', 
       message:  `HTTP server ready at http://${addressInfo.address}:${addressInfo.port}`, 
       label:'SERVER' });
@@ -33,10 +33,10 @@ const startServer = async () => {
   const signalTraps: NodeJS.Signals[] = ['SIGTERM', 'SIGINT', 'SIGUSR2'];
   signalTraps.forEach((type) => {
     process.once(type, async () => {
-      logger.log({ level: 'info', message: `process.once ${type}`, label:'SERVER' });
+      Logger.log({ level: 'info', message: `process.once ${type}`, label:'SERVER' });
 
       server.close(() => {
-        logger.log({level: 'debug', message: 'HTTP Server closed'});
+        Logger.log({level: 'debug', message: 'HTTP Server closed'});
       });
     });
   });

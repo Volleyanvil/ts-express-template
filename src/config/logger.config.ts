@@ -3,44 +3,63 @@ const { combine, timestamp, label, printf } = format;
 import { ENV, LOGS_PATH } from '@config/environment.config';
 
 // Winston docs: https://github.com/winstonjs/winston#usage
+// Singleton pattern https://en.wikipedia.org/wiki/Singleton_pattern
 
-const customFormat = printf(({ level, message, label, timestamp }) => {
-  return `${timestamp as string} [${label}] ${level.toUpperCase()}: ${message}`;
-});
+class LoggerConf {
 
-// TODO: Update to adopt singleton pattern for logger https://en.wikipedia.org/wiki/Singleton_pattern
-const LoggerWrapper = (): WinstonLogger => {
-  const logger: WinstonLogger = createLogger({
-    level: 'info',
-    format: combine(
-      timestamp({ format: 'isoDateTime' }),
-      customFormat
-    ),
-    // defaultMeta: {},
-    exitOnError: false,
-    // silent: false,
-    transports: [
-      new transports.File({ 
-        filename: `${LOGS_PATH}/error.log`,
-        level: 'error'
-      }),
-      new transports.File({ filename: `${LOGS_PATH}/combined.log` }),
-    ]
+  private static instance: LoggerConf;
+
+  private logger: WinstonLogger;
+
+  private customFormat = printf(({ level, message, label, timestamp }) => {
+    return `${timestamp as string} [${label}] ${level.toUpperCase()}: ${message}`;
   });
 
-  // Add debug-level console logging when not in production
-  //
-  if (ENV !== 'production') {
-    logger.add(new transports.Console({
-      format: combine(
-        timestamp({ format: 'YYYY-MM-DD HH:mm:ss'}),
-        label({ label: 'DEV' }),
-        customFormat
-      ),
-      level: 'debug',
-    }));
+  static get(): LoggerConf {
+    if (!LoggerConf.instance) {
+      LoggerConf.instance = new LoggerConf();
+    }
+    return LoggerConf.instance;
   }
-  return logger;
+
+  init(): WinstonLogger {
+    if (this.logger) return this.logger;
+
+    // Initialize Winston logger
+    this.logger = createLogger({
+      level: 'info',
+      format: combine(
+        timestamp({ format: 'isoDateTime' }),
+        this.customFormat
+      ),
+      // defaultMeta: {},
+      exitOnError: false,
+      // silent: false,
+      transports: [
+        new transports.File({ 
+          filename: `${LOGS_PATH}/error.log`,
+          level: 'error'
+        }),
+        new transports.File({ filename: `${LOGS_PATH}/combined.log` }),
+      ]
+    });
+
+    // Add debug-level console logging when not in production
+    if (ENV !== 'production') {
+      this.logger.add(new transports.Console({
+        format: combine(
+          timestamp({ format: 'YYYY-MM-DD HH:mm:ss'}),
+          label({ label: 'DEV' }),
+          this.customFormat
+        ),
+        level: 'debug',
+      }));
+    }
+
+    return this.logger;
+  }
+
 }
 
-export const logger = LoggerWrapper();
+export const Logger = LoggerConf.get().init();
+
