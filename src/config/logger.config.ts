@@ -1,6 +1,6 @@
 import { createLogger, format, transports, Logger as WinstonLogger } from 'winston';
 const { combine, timestamp, label, printf } = format;
-import { LOGS_PATH } from '@config/environment.config';
+import { ENV, LOGS_PATH } from '@config/environment.config';
 
 // Winston docs: https://github.com/winstonjs/winston#usage
 
@@ -8,7 +8,7 @@ const customFormat = printf(({ level, message, label, timestamp }) => {
   return `${timestamp as string} [${label}] ${level.toUpperCase()}: ${message}`;
 });
 
-// TODO: Adopt singleton pattern for logger https://en.wikipedia.org/wiki/Singleton_pattern
+// TODO: Update to adopt singleton pattern for logger https://en.wikipedia.org/wiki/Singleton_pattern
 const LoggerWrapper = (): WinstonLogger => {
   const logger: WinstonLogger = createLogger({
     level: 'info',
@@ -30,7 +30,7 @@ const LoggerWrapper = (): WinstonLogger => {
 
   // Add debug-level console logging when not in production
   //
-  if (process.env.NODE_DEV !== 'production') {
+  if (ENV !== 'production') {
     logger.add(new transports.Console({
       format: combine(
         timestamp({ format: 'YYYY-MM-DD HH:mm:ss'}),
