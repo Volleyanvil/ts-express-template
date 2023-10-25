@@ -7,25 +7,24 @@ export class AuthRouter {
   constructor() {
 
     this.router.route('/register')
-    .post(this.controller.register);
+    .post(AuthController.register);
 
     this.router.route('/login')
-      .post(this.controller.login);
+      .post(AuthController.login);
 
     this.router.route('/logout')
-      .post(this.controller.logout);
+      .post(AuthController.logout);
   
     this.router.route('/refresh-token')
-      .post(this.controller.refresh);
+      .post(AuthController.refresh);
 
     this.router.route('/reset-password')
-      .get(this.controller.resetPassword);
+      .get(AuthController.resetPassword);
 
-    this.router.route('/confirm-email')
-      .patch(this.controller.verifyEmail);
+    this.router.route('/verify-email')
+      .patch(AuthController.verifyEmail);
   }
 
   router = Router();
 
-  private controller = new AuthController();
 }
