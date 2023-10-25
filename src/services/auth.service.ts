@@ -14,7 +14,18 @@ import {
 
 // TODO: Handle ENV variables in environment.config and import
 
-export class AuthService {
+class AuthService {
+
+  private static instance: AuthService;
+
+  constructor() {}
+
+  static get(): AuthService {
+    if (!AuthService.instance) {
+      AuthService.instance = new AuthService();
+    }
+    return AuthService.instance;
+  }
 
   // Generates an returns a new JWT access token for user
   async generateAccessToken (userId: Types.ObjectId): Promise<string> {
@@ -22,7 +33,6 @@ export class AuthService {
     const secretKey = ACCESS_TOKEN_SECRET;  // Import env variable from environment.config instead
     const alg = ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
     const duration = ACCESS_TOKEN_EXPIRATION;
-
     // https://www.rfc-editor.org/rfc/rfc7519#section-2
     // iat, exp must be NumericDates (seconds since epoch) use dayjs unix()
     const tokenPayload = {
@@ -30,7 +40,6 @@ export class AuthService {
       iat: dayjs().unix(),
       sub: userId,
     }
-
     return Jwt.encode(tokenPayload, secretKey, alg)
   }
 
@@ -53,8 +62,8 @@ export class AuthService {
       token: token, 
       user: userId, 
       expires: expires.toDate(), 
-      family_expires: tokenFamily.exp || now.add(REFRESH_TOKEN_FAMILY_EXPIRATION, 'days').toDate(),
-      family_root: tokenFamily.root || undefined,
+      family_expires: tokenFamily?.exp || now.add(REFRESH_TOKEN_FAMILY_EXPIRATION, 'days').toDate(),
+      family_root: tokenFamily?.root || undefined,
     });
     newRToken.save();
 
@@ -90,3 +99,7 @@ export class AuthService {
     return deleted.deletedCount;
   }
 }
+
+const instance = AuthService.get();
+
+export { instance as AuthService }
