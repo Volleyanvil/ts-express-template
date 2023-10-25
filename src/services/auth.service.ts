@@ -2,6 +2,14 @@ import dayjs from 'dayjs';  // Use Dayjs instead of moment (maintenance mode)
 import * as Jwt from 'jwt-simple';
 import { HydratedDocument, Types } from 'mongoose';
 import { IRefreshToken, RefreshToken } from '@models/refresh-token.schema';
+import { 
+  ACCESS_TOKEN_SECRET, 
+  ACCESS_TOKEN_EXPIRATION, 
+  ACCESS_TOKEN_ALG, 
+  REFRESH_TOKEN_SECRET, 
+  REFRESH_TOKEN_EXPIRATION, 
+  REFRESH_TOKEN_FAMILY_EXPIRATION 
+} from '@config/environment.config';
 
 
 // TODO: Handle ENV variables in environment.config and import
@@ -11,9 +19,9 @@ export class AuthService {
   // Generates an returns a new JWT access token for user
   async generateAccessToken (userId: Types.ObjectId): Promise<string> {
     // https://github.com/hokaccha/node-jwt-simple#readme
-    const secretKey = process.env.ACCESS_TOKEN_SECRET;  // Import env variable from environment.config instead
-    const alg = process.env.ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
-    const duration = parseInt(process.env.ACCESS_TOKEN_EXPIRATION);
+    const secretKey = ACCESS_TOKEN_SECRET;  // Import env variable from environment.config instead
+    const alg = ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
+    const duration = ACCESS_TOKEN_EXPIRATION;
 
     // https://www.rfc-editor.org/rfc/rfc7519#section-2
     // iat, exp must be NumericDates (seconds since epoch) use dayjs unix()
@@ -28,10 +36,10 @@ export class AuthService {
 
   // Generates and returns a new refresh token for user with optional params when using an existing token family.
   async generateRefreshToken(userId: Types.ObjectId, tokenFamily?: { exp: Date, root: string }): Promise<HydratedDocument<IRefreshToken>> {
-    const secretKey = process.env.REFRESH_TOKEN_SECRET; 
-    const alg = process.env.ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
+    const secretKey = REFRESH_TOKEN_SECRET; 
+    const alg = ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
     const now = dayjs();
-    const expires = now.add(parseInt(process.env.REFRESH_TOKEN_EXPIRATION), 'days');
+    const expires = now.add(REFRESH_TOKEN_EXPIRATION, 'days');
 
     const tokenPayload = {
       exp: expires.unix(),
@@ -45,7 +53,7 @@ export class AuthService {
       token: token, 
       user: userId, 
       expires: expires.toDate(), 
-      family_expires: tokenFamily.exp || now.add(parseInt(process.env.REFRESH_TOKEN_FAMILY_EXPIRATION), 'days').toDate(),
+      family_expires: tokenFamily.exp || now.add(REFRESH_TOKEN_FAMILY_EXPIRATION, 'days').toDate(),
       family_root: tokenFamily.root || undefined,
     });
     newRToken.save();

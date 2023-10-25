@@ -9,6 +9,8 @@ import { UserRouter } from '@routes/user.route';
 import { Auth } from '@config/auth.config';
 
 
+// TODO: Add hpp, helmet (later?), cors options
+
 const createServer = (): express.Application => {
     const app = express();
 

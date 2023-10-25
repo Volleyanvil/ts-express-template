@@ -10,6 +10,7 @@ A repository template for ExpressJS projects using TypeScrtipt. Pre-configured w
 - CI with Jenkins (currently missing github actions triggers)
 - Logging with Winston
 - MongoDB connectivity & object data modelling with MongooseODM
+- User authentication and authorization with Passport and JWT (ROP Flow)
 
 ## Getting Started
 To intall and start the server in development mode run:

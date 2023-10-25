@@ -3,10 +3,8 @@ import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import { HydratedDocument } from 'mongoose';
 
 import { IUser, User } from '@models/user.schema';
+import { ACCESS_TOKEN_SECRET } from '@config/environment.config';
 
-
-// TODO: Update environment.config
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
 
 // Experimenting with singleton pattern approach based on https://github.com/konfer-be/typeplate
 
