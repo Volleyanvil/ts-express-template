@@ -71,7 +71,7 @@ class AuthController {
     if (!user) {    // User not found
       res.status(400).send({mesage: 'Please check that the username or email is correct'});
     } else if (password && user.checkPassword(password) === false) {  // Password does not match
-      res.status(400).send({message: 'Incorrect password'});
+      res.status(400).send({message: 'Incorrect or missing password'});
     }
 
     const accessToken = await AuthService.generateAccessToken(user._id);
