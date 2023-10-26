@@ -44,7 +44,7 @@ class AuthService {
   }
 
   // Generates and returns a new refresh token for user with optional params when using an existing token family.
-  async generateRefreshToken(userId: Types.ObjectId, tokenFamily?: { exp: Date, root: string }): Promise<HydratedDocument<IRefreshToken>> {
+  async generateRefreshToken(userId: Types.ObjectId, tokenFamily?: { exp: Date, root: Types.ObjectId }): Promise<HydratedDocument<IRefreshToken>> {
     const secretKey = REFRESH_TOKEN_SECRET; 
     const alg = ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
     const now = dayjs();
@@ -74,13 +74,13 @@ class AuthService {
   async rotateToken(oldRToken: HydratedDocument<IRefreshToken>): Promise<{ accessToken: string, refreshToken: HydratedDocument<IRefreshToken> }> {
      // Revoke used token, throw error. NOTE: should be logged as potential replay attack.
     if (oldRToken.isUsed) {
-      this.revokeRefreshTokens(oldRToken.family_root);
+      this.revokeRefreshTokens(oldRToken.familyRoot);
       throw new Error('Token has been used');
     }
 
     // Check for token/family expiration
-    if (dayjs().toDate() > oldRToken.expires || dayjs().toDate() > oldRToken.family_expires) {
-      this.revokeRefreshTokens(oldRToken.family_root);
+    if (dayjs().toDate() > oldRToken.expires || dayjs().toDate() > oldRToken.familyExpires) {
+      this.revokeRefreshTokens(oldRToken.familyRoot);
       throw new Error('Refresh token has expired');
     }
 
@@ -89,12 +89,12 @@ class AuthService {
 
     // Generate new tokens
     const accessToken = await this.generateAccessToken(oldRToken.user);
-    const refreshToken = await this.generateRefreshToken(oldRToken.user, {exp: oldRToken.family_expires, root: oldRToken.family_root});
+    const refreshToken = await this.generateRefreshToken(oldRToken.user, {exp: oldRToken.familyExpires, root: oldRToken.familyRoot});
     return { accessToken, refreshToken };
   }
 
   // Revokes a refresh token family, returns number of deleted documents.
-  async revokeRefreshTokens(refreshTokenRoot: string): Promise<number> {
+  async revokeRefreshTokens(refreshTokenRoot: Types.ObjectId): Promise<number> {
     const deleted = await RefreshToken.deleteMany({ family_root: refreshTokenRoot});
     return deleted.deletedCount;
   }

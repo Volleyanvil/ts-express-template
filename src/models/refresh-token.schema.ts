@@ -1,4 +1,5 @@
 import { Schema, model, Types } from 'mongoose';
+import { TokenFamily, ITokenFamily } from '@models/token-family.schema';
 
 
 // Using a separete token family model as a wrapper would make it less cumbersome to purge expired token families
@@ -37,27 +38,37 @@ export interface IRefreshToken {
   user: Types.ObjectId,
   isUsed: boolean,
   expires: Date,
-  family_expires: Date,
-  family_root: string,
+  familyExpires: Date,
+  familyRoot: Types.ObjectId,
 }
 
 const RefreshTokenSchema = new Schema<IRefreshToken>({
-  token: { type: String, required: true, unique: true },
+  token: { type: String, required: true, unique: true, index: true },
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   isUsed: { type: Boolean, default: false },
   expires: { type: Date, required: true },
-  family_expires: { type: Date, required: true },
-  family_root: { type: String, default: undefined }
+  familyExpires: { type: Date, required: true },
+  familyRoot: { type: Schema.Types.ObjectId, ref: 'TokenFamily', default: undefined, index: true}
 },
 { 
   timestamps: true 
 });
 
-// Add token indexing
-
-// If token does not belong to a token family, set it as the root of a new family
-RefreshTokenSchema.pre('save', function() {
-  if (this.family_root === undefined) this.family_root = this.token;
+RefreshTokenSchema.pre('save', async function(): Promise<void> {
+  if (this.isUsed) return;
+  if (this.familyRoot) {
+    const doc: ITokenFamily = {
+      user: this.user,
+      current: this._id,
+      expires: this.familyExpires,
+    };
+    const newFamily = await new TokenFamily(doc).save();
+    this.familyRoot = newFamily._id;
+  } else {
+    const family = await TokenFamily.findById(this.familyRoot);
+    family.current = this._id;
+    await family.save();
+  }
 });
 
 export const RefreshToken = model<IRefreshToken>('RefreshToken', RefreshTokenSchema);

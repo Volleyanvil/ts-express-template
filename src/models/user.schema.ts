@@ -1,18 +1,11 @@
 import { Model, Schema, model } from 'mongoose';
 import * as Bcrypt from 'bcrypt';
 
+
 enum ROLE {
   admin = 'admin',
   user = 'user',
 }
-
-/*
-enum STATUS {
-  registered = 'registered',
-  verified = 'verified',
-}
-{ type: String, enum: STATUS, default: STATUS.registered }
-*/
 
 export interface IUser {
   username: string,

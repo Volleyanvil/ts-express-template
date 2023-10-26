@@ -92,7 +92,7 @@ class AuthController {
     if (!req.cookies.refreshToken) res.status(400).json({message: 'Nothing to revoke'});
     const refreshToken = await RefreshToken.findOne({token: req.cookies.refreshToken}).exec();
     if (!refreshToken) res.status(400).json({message: 'Invalid refresh token'});
-    await AuthService.revokeRefreshTokens(refreshToken.family_root);
+    await AuthService.revokeRefreshTokens(refreshToken.familyRoot);
     res.status(200).json({message: 'Logged out successfully'});
   }
 
