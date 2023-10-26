@@ -49,6 +49,8 @@ class AuthService {
     const alg = ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
     const now = dayjs();
     const expires = now.add(REFRESH_TOKEN_EXPIRATION, 'days');
+    const familyExpires = tokenFamily?.exp || now.add(REFRESH_TOKEN_FAMILY_EXPIRATION, 'days').toDate();
+    const familyRoot = tokenFamily?.root || undefined;
 
     const tokenPayload = {
       exp: expires.unix(),
@@ -62,8 +64,8 @@ class AuthService {
       token: token, 
       user: userId, 
       expires: expires.toDate(), 
-      family_expires: tokenFamily?.exp || now.add(REFRESH_TOKEN_FAMILY_EXPIRATION, 'days').toDate(),
-      family_root: tokenFamily?.root || undefined,
+      familyExpires: familyExpires,
+      familyRoot: familyRoot,
     });
     newRToken.save();
 
