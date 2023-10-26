@@ -48,7 +48,7 @@ const RefreshTokenSchema = new Schema<IRefreshToken>({
   isUsed: { type: Boolean, default: false },
   expires: { type: Date, required: true },
   familyExpires: { type: Date, required: true },
-  familyRoot: { type: Schema.Types.ObjectId, ref: 'TokenFamily', default: undefined, index: true}
+  familyRoot: { type: Schema.Types.ObjectId, ref: 'TokenFamily', default: undefined}
 },
 { 
   timestamps: true 
@@ -56,7 +56,7 @@ const RefreshTokenSchema = new Schema<IRefreshToken>({
 
 RefreshTokenSchema.pre('save', async function(): Promise<void> {
   if (this.isUsed) return;
-  if (this.familyRoot) {
+  if (this.familyRoot === undefined) {
     const doc: ITokenFamily = {
       user: this.user,
       current: this._id,

@@ -43,7 +43,9 @@ const UserSchema = new Schema<IUser, UserModel, IUserMethods>({
 UserSchema.pre('save', async function(next) {
   try {
     if (!this.isModified('password')) return next();
+    console.log(this.password);
     this.password = await Bcrypt.hash(this.password, 10);
+    console.log(this.password);
     next();
   } catch (err) {
     next(err as Error);
@@ -51,12 +53,13 @@ UserSchema.pre('save', async function(next) {
 });
 
 // Compare provided cleartext password with stored hash value
-UserSchema.method('checkPassword', async function checkPassword(password: string) {
+UserSchema.method('checkPassword', async function checkPassword(password: string): Promise<boolean> {
+  console.log(password, ' ', this.password);
   return await Bcrypt.compare(password, this.password);
 });
 
 // Compare provided cleartext password with stored hash value
-UserSchema.method('fullName', async function fullName() {
+UserSchema.method('fullName', function fullName(): string {
   return this.firstName + ' ' + this.lastName;
 });
 
