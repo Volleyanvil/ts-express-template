@@ -10,6 +10,7 @@ import {
   REFRESH_TOKEN_EXPIRATION, 
   REFRESH_TOKEN_FAMILY_EXPIRATION 
 } from '@config/environment.config';
+import { TokenFamily } from '@models/token-family.schema';
 
 
 // TODO: Handle ENV variables in environment.config and import
@@ -28,46 +29,45 @@ class AuthService {
   }
 
   // Generates an returns a new JWT access token for user
-  async generateAccessToken (userId: Types.ObjectId): Promise<string> {
-    // https://github.com/hokaccha/node-jwt-simple#readme
-    const secretKey = ACCESS_TOKEN_SECRET;  // Import env variable from environment.config instead
-    const alg = ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
-    const duration = ACCESS_TOKEN_EXPIRATION;
-    // https://www.rfc-editor.org/rfc/rfc7519#section-2
-    // iat, exp must be NumericDates (seconds since epoch) use dayjs unix()
+  async generateAccessToken (userId: Types.ObjectId, duration: number = null): Promise<string> {
     const tokenPayload = {
-      exp: dayjs().add(duration, 'minutes').unix(),
+      exp: dayjs().add(duration || ACCESS_TOKEN_EXPIRATION, 'minutes').unix(),
       iat: dayjs().unix(),
       sub: userId,
     }
-    return Jwt.encode(tokenPayload, secretKey, alg)
+    return Jwt.encode(tokenPayload, ACCESS_TOKEN_SECRET, ACCESS_TOKEN_ALG as Jwt.TAlgorithm)
   }
 
   // Generates and returns a new refresh token for user with optional params when using an existing token family.
   async generateRefreshToken(userId: Types.ObjectId, tokenFamily?: { exp: Date, root: Types.ObjectId }): Promise<HydratedDocument<IRefreshToken>> {
-    const secretKey = REFRESH_TOKEN_SECRET; 
-    const alg = ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
     const now = dayjs();
     const expires = now.add(REFRESH_TOKEN_EXPIRATION, 'days');
     const familyExpires = tokenFamily?.exp || now.add(REFRESH_TOKEN_FAMILY_EXPIRATION, 'days').toDate();
-    const familyRoot = tokenFamily?.root || undefined;
+    let familyRoot = tokenFamily?.root || undefined;
 
+    if (familyRoot === undefined) {
+      const newFamily = await new TokenFamily({
+        user: userId,
+        expires: familyExpires,
+      }).save();
+      familyRoot = newFamily._id;
+    }
+
+    // Refresh token can also be a hard-to-guess unique string (random bytes)
     const tokenPayload = {
       exp: expires.unix(),
       iat: now.unix(),
       sub: userId,
     }
-    const token = Jwt.encode(tokenPayload, secretKey, alg);
-    // NOTE: RT details are stored in DB. Tokens can also be random, hard-to-guess strings.
+    const token = Jwt.encode(tokenPayload, REFRESH_TOKEN_SECRET, 'HS256');
 
-    const newRToken = new RefreshToken({
+    const newRToken = await new RefreshToken({
       token: token, 
       user: userId, 
       expires: expires.toDate(), 
       familyExpires: familyExpires,
       familyRoot: familyRoot,
-    });
-    newRToken.save();
+    }).save();
 
     return newRToken;
   }

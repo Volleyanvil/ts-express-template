@@ -1,27 +1,21 @@
 import { Schema, model, Types } from 'mongoose';
-import { TokenFamily, ITokenFamily } from '@models/token-family.schema';
+import { TokenFamily } from '@models/token-family.schema';
 
-
-// Using a separete token family model as a wrapper would make it less cumbersome to purge expired token families
-// earlier (i.e. find families that have expired due to inactivity).
-// No security benefits. Could reduce total DB size in some cases
 
 /**Rotation and raplay attack prevention notes
  * 
  * Maximum token lifetime and idle lifetime:
  * - A token family has a maximum duration after which re-authorization is always required
- * - Each refresh token also has its own, shorter duration, during which it must be used, or it expires
+ * - Each refresh token has its own individual, shorter lifetime, after which the token and family expire
  * 
- * family_root holds the value of the first token in a token family, and is shared between all tokens in that family
+ * A token family should be revoked when:
+ *  a) User sends a valid logout or revoke request
+ *  b) The latest, unused token has expired
+ *  c) The token family has expired
+ *  d) A token gets reused
  * 
- * A token family is revoked when:
- *  a) User sends a logout request with a valid token
- *  b) The latest token has expired (Family is purged from DB upon detection or in a routine based on family expiration)
- *  c) The token family has expired (Either purged from database, or revoked upon detection)
- *  d) A token gets reused ()
- * 
- * Recommended client-side storage and delivery
- * - Store Access tokens in session or in local storage
+ * Recommended storage and delivery:
+ * - Store Access tokens in session or local storage
  *   * The short lifetime should mitigate the risks of XSS attacks.
  *   * Should additional security be necessary, track and limit the times an AT can be used auth-server-side.
  *   * DO NOT store ATs in cookies, where they can be used in CSRF attacks.
@@ -55,16 +49,7 @@ const RefreshTokenSchema = new Schema<IRefreshToken>({
 });
 
 RefreshTokenSchema.pre('save', async function(): Promise<void> {
-  if (this.isUsed) return;
-  if (this.familyRoot === undefined) {
-    const doc: ITokenFamily = {
-      user: this.user,
-      current: this._id,
-      expires: this.familyExpires,
-    };
-    const newFamily = await new TokenFamily(doc).save();
-    this.familyRoot = newFamily._id;
-  } else {
+  if (!this.isUsed && this.familyRoot !== undefined) {
     const family = await TokenFamily.findById(this.familyRoot);
     family.current = this._id;
     await family.save();

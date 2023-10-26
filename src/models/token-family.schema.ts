@@ -9,7 +9,7 @@ export interface ITokenFamily {
 
 const TokenFamilySchema = new Schema<ITokenFamily>({
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true , index: true},
-  current: { type: Schema.Types.ObjectId, ref: 'RefreshToken', required: true },
+  current: { type: Schema.Types.ObjectId, ref: 'RefreshToken'},
   expires: { type: Date, required: true },
 },
 { 
