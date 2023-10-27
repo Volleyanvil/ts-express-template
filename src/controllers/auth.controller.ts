@@ -1,20 +1,32 @@
 import { Request, Response } from 'express';
-import { HydratedDocument, Error as MongooseError } from 'mongoose';
+import { Error as MongooseError } from 'mongoose';
+import createHttpError from 'http-errors';
 
-import { User, IUser } from '@server/models/user.schema';
+import { User } from '@server/models/user.schema';
 import { AuthService } from '@services/auth.service';
 import { RefreshToken } from '@models/refresh-token.schema';
 
 
-export class AuthController {
+class AuthController {
+
+  private static instance: AuthController;
+
+  constructor() {}
+
+  static get(): AuthController {
+    if (!AuthController.instance) {
+      AuthController.instance = new AuthController();
+    }
+    return AuthController.instance;
+  }
 
   // Creates and authenticates new user
-  async register(req: Request, res: Response) {
-    const newUser: HydratedDocument<IUser> = new User(req.body)
+  async register(req: Request, res: Response): Promise<void> {
     try {
-      await newUser.save()
-      const accessToken = await this.authService.generateAccessToken(newUser._id);
-      const refreshToken = await this.authService.generateRefreshToken(newUser._id);
+      const newUser = await new User(req.body).save();
+      const accessToken = await AuthService.generateAccessToken(newUser._id);
+      const refreshToken = await AuthService.generateRefreshToken(newUser._id);
+      delete newUser.password;
       res.status(201)
       .cookie('refreshToken', refreshToken.token, {
         httpOnly: true, 
@@ -25,6 +37,8 @@ export class AuthController {
       .json({ user: newUser, accessToken: accessToken });
     } catch (err) {
       // TODO: Move error handling to dedicated middleware
+      // TODO: Handle validation errors by type and limit message contents
+      //
       if (err instanceof MongooseError.ValidationError) {
         // https://mongoosejs.com/docs/api/error.html#Error.ValidationError
         const error = err as MongooseError.ValidationError;
@@ -37,7 +51,7 @@ export class AuthController {
       } else if (err instanceof Error) {
         const error = err as Error;
         console.log(error.name, ' - ', error.message);
-        res.status(500).json({message: error.message});
+        res.status(500).json({message: 'Internal server error'});
       } else {
         console.log('Unkown error: ', err);
       }
@@ -45,25 +59,25 @@ export class AuthController {
   }
 
   // Authenticates user with credentials
-  async login(req: Request, res: Response) {
+  async login(req: Request, res: Response, next: (err?: Error) => void): Promise<void> {
     const {username, email, password } = req.body;
 
-    if (!username && !email) res.status(400).send({message: 'A username or email is required to login'});
-    if (!password) res.status(400).send({message: 'A password is required to login'});
+    if (!username && !email) return next(createHttpError(400, 'Please provide a valid username or email to log in'));
+    if (!password) return next(createHttpError(400, 'Please provide a valid password to log in'));
 
     const user = await User.findOne({$or: [
       {username: username},
       {email: email}
-    ]}).exec();
+    ]}).select('password').exec();
 
-    if (!user) {    // User not found
-      res.status(400).send({mesage: 'Please check that the username or email is correct'});
-    } else if (password && user.checkPassword(password)) {  // Password does not match
-      res.status(400).send({message: 'Incorrect username/email or password'});
+    if (!user) {
+      return next(createHttpError(400, 'Please check that the username or email is correct'));
+    } else if (password && user.checkPassword(password) === false) {
+      return next(createHttpError(400, 'Incorrect password'));
     }
 
-    const accessToken = await this.authService.generateAccessToken(user._id);
-    const refreshToken = await this.authService.generateRefreshToken(user._id);
+    const accessToken = await AuthService.generateAccessToken(user._id);
+    const refreshToken = await AuthService.generateRefreshToken(user._id);
     res.status(200)
     .cookie('refreshToken', refreshToken.token, {
       httpOnly: true, 
@@ -75,26 +89,21 @@ export class AuthController {
   }
 
   // Revokes current refresh token and token family
-  async logout(req: Request, res: Response) {
+  async logout(req: Request, res: Response, next: (err: Error) => void): Promise<void> {
     // (?) TODO: Verify that requesting user matches RT owner
-    if (!req.cookies.refreshToken) res.status(400).json({message: 'Nothing to revoke'});
+    if (!req.cookies.refreshToken) return next(createHttpError(400, 'Nothing to revoke'));
     const refreshToken = await RefreshToken.findOne({token: req.cookies.refreshToken}).exec();
-    if (!refreshToken) res.status(400).json({message: 'Invalid refresh token'});
-    await this.authService.revokeRefreshTokens(refreshToken.family_root);
+    if (!refreshToken) return next(createHttpError(400, 'Invalid refresh token'));
+    await AuthService.revokeRefreshTokens(refreshToken.familyRoot);
     res.status(200).json({message: 'Logged out successfully'});
   }
 
   // Generate new access token against a refresh token, rotate refresh token.
-  async refresh(req: Request, res: Response) {
-    // Find and validate provided refresh token
-    // > Can token be found: non-existent or removed, error
-    // > Has token been used: possible replay, revoke token vamily
-    // > Has token expired: re-authentication required, unauthorized
-    // Generate new access token for refresh token's user
-    if (!req.cookies.refreshToken) res.status(400).json({message: 'Missing refresh token'});
+  async refresh(req: Request, res: Response, next: (err: Error) => void): Promise<void> {
+    if (!req.cookies.refreshToken) return next(createHttpError(400, 'Missing refresh token'));
     const oldRefreshToken = await RefreshToken.findOne({token: req.cookies.refreshToken}).exec();
-    if (!oldRefreshToken) res.status(400).json({message: 'Invalid refresh token'});
-    const { accessToken, refreshToken } = await this.authService.rotateToken(oldRefreshToken);
+    if (!oldRefreshToken) return next(createHttpError(400, 'Invalid refresh token'));
+    const { accessToken, refreshToken } = await AuthService.rotateToken(oldRefreshToken);
 
     res.status(200)
     .cookie('refreshToken', refreshToken.token, {
@@ -108,20 +117,13 @@ export class AuthController {
 
   // TODO
   // Generates a list of user's active sessions (refresh token families)
-  async activeSessions(_req: Request, res: Response) {
-    // Use user, isUsed, and expiration fields to get all valid tokens
-    // NOTE: Much simpler to implement if token families exist as docs in the DB
-    /*
-    [
-      {
-        id: token._id,
-        current_expiration: token.expires
-        maximum_expiration: token.family_expires
-        ... other additional details ...
-      },
-      ...
-    ]
-    */
+  async activeSessions(_req: Request, res: Response): Promise<void> {
+    // Find TokenFamily objects for current user. Populate current.expires to include token's expiration.
+    // DO NOT INCLUDE TOKEN FIELDS' VALUES
+    // Return an array of token families.
+
+    // To implement without token families, create a compound index of familyRoot and isUsed for RefreshToken
+    // Each family should only have one unused token.
 
     res.status(500).json({ message: 'Active session listing is not implemented yet.' })
   }
@@ -130,7 +132,7 @@ export class AuthController {
 
   // TODO
   // Revokes one or more refresh token families.
-  async revoke(_req: Request, res: Response) {
+  async revoke(_req: Request, res: Response): Promise<void> {
     // NOTE: Users should only be able to revoke their own tokens
     // NOTE: One option for implementation is to accept an array of ObjectId strings corresponding to family root tokens.
     //       The _id field is not secret, since it is never used for token generation, and ownership should be enforced
@@ -148,23 +150,24 @@ export class AuthController {
   }
 
   // TODO
-  async resetPassword(_req: Request, res: Response) {
-    // Verify user's email address
+  async resetPassword(_req: Request, res: Response): Promise<void> {
+    res.status(500).send('Password resetting has not yet been implemented.');
+  }
 
+  // TODO
+  // Verify user's email address
+  async verifyEmail(_req: Request, res: Response): Promise<void> {
     // Using a mailer event:
     // > Send user a confirmation link containing a temporary, statelessly veriafiable token with a claim to subject user
     // In controller:
     // > Decode token, verify that user exists and is eligible for email confirmation
     // > Update user email confirmation status
 
-    res.status(200).send('Password resetting has not yet been implemented.');
-  }
-
-  // TODO
-  async verifyEmail(_req: Request, res: Response) {
-    // Verify user's email address
     res.status(500).send('Email verification has not yet been implemented.');
   }
 
-  private authService = new AuthService();
 }
+
+const instance = AuthController.get();
+
+export { instance as AuthController }

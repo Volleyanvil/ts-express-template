@@ -10,53 +10,64 @@ import {
   REFRESH_TOKEN_EXPIRATION, 
   REFRESH_TOKEN_FAMILY_EXPIRATION 
 } from '@config/environment.config';
+import { TokenFamily } from '@models/token-family.schema';
 
 
 // TODO: Handle ENV variables in environment.config and import
 
-export class AuthService {
+class AuthService {
+
+  private static instance: AuthService;
+
+  constructor() {}
+
+  static get(): AuthService {
+    if (!AuthService.instance) {
+      AuthService.instance = new AuthService();
+    }
+    return AuthService.instance;
+  }
 
   // Generates an returns a new JWT access token for user
-  async generateAccessToken (userId: Types.ObjectId): Promise<string> {
-    // https://github.com/hokaccha/node-jwt-simple#readme
-    const secretKey = ACCESS_TOKEN_SECRET;  // Import env variable from environment.config instead
-    const alg = ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
-    const duration = ACCESS_TOKEN_EXPIRATION;
-
-    // https://www.rfc-editor.org/rfc/rfc7519#section-2
-    // iat, exp must be NumericDates (seconds since epoch) use dayjs unix()
+  async generateAccessToken (userId: Types.ObjectId, duration: number = null): Promise<string> {
     const tokenPayload = {
-      exp: dayjs().add(duration, 'minutes').unix(),
+      exp: dayjs().add(duration || ACCESS_TOKEN_EXPIRATION, 'minutes').unix(),
       iat: dayjs().unix(),
       sub: userId,
     }
-
-    return Jwt.encode(tokenPayload, secretKey, alg)
+    return Jwt.encode(tokenPayload, ACCESS_TOKEN_SECRET, ACCESS_TOKEN_ALG as Jwt.TAlgorithm)
   }
 
   // Generates and returns a new refresh token for user with optional params when using an existing token family.
-  async generateRefreshToken(userId: Types.ObjectId, tokenFamily?: { exp: Date, root: string }): Promise<HydratedDocument<IRefreshToken>> {
-    const secretKey = REFRESH_TOKEN_SECRET; 
-    const alg = ACCESS_TOKEN_ALG as Jwt.TAlgorithm;
+  async generateRefreshToken(userId: Types.ObjectId, tokenFamily?: { exp: Date, root: Types.ObjectId }): Promise<HydratedDocument<IRefreshToken>> {
     const now = dayjs();
     const expires = now.add(REFRESH_TOKEN_EXPIRATION, 'days');
+    const familyExpires = tokenFamily?.exp || now.add(REFRESH_TOKEN_FAMILY_EXPIRATION, 'days').toDate();
+    let familyRoot = tokenFamily?.root || undefined;
 
+    if (familyRoot === undefined) {
+      const newFamily = await new TokenFamily({
+        user: userId,
+        expires: familyExpires,
+      }).save();
+      familyRoot = newFamily._id;
+    }
+
+    // Refresh token can also be a hard-to-guess unique string (random bytes)
     const tokenPayload = {
       exp: expires.unix(),
       iat: now.unix(),
       sub: userId,
     }
-    const token = Jwt.encode(tokenPayload, secretKey, alg);
-    // NOTE: RT details are stored in DB. Tokens can also be random, hard-to-guess strings.
+    const token = Jwt.encode(tokenPayload, REFRESH_TOKEN_SECRET, 'HS256');
 
-    const newRToken = new RefreshToken({
+    const newRToken = await new RefreshToken({
       token: token, 
       user: userId, 
       expires: expires.toDate(), 
-      family_expires: tokenFamily.exp || now.add(REFRESH_TOKEN_FAMILY_EXPIRATION, 'days').toDate(),
-      family_root: tokenFamily.root || undefined,
-    });
-    newRToken.save();
+      familyExpires: familyExpires,
+      familyRoot: familyRoot,
+    }).save();
 
     return newRToken;
   }
@@ -65,13 +76,13 @@ export class AuthService {
   async rotateToken(oldRToken: HydratedDocument<IRefreshToken>): Promise<{ accessToken: string, refreshToken: HydratedDocument<IRefreshToken> }> {
      // Revoke used token, throw error. NOTE: should be logged as potential replay attack.
     if (oldRToken.isUsed) {
-      this.revokeRefreshTokens(oldRToken.family_root);
+      this.revokeRefreshTokens(oldRToken.familyRoot);
       throw new Error('Token has been used');
     }
 
     // Check for token/family expiration
-    if (dayjs().toDate() > oldRToken.expires || dayjs().toDate() > oldRToken.family_expires) {
-      this.revokeRefreshTokens(oldRToken.family_root);
+    if (dayjs().toDate() > oldRToken.expires || dayjs().toDate() > oldRToken.familyExpires) {
+      this.revokeRefreshTokens(oldRToken.familyRoot);
       throw new Error('Refresh token has expired');
     }
 
@@ -80,13 +91,17 @@ export class AuthService {
 
     // Generate new tokens
     const accessToken = await this.generateAccessToken(oldRToken.user);
-    const refreshToken = await this.generateRefreshToken(oldRToken.user, {exp: oldRToken.family_expires, root: oldRToken.family_root});
+    const refreshToken = await this.generateRefreshToken(oldRToken.user, {exp: oldRToken.familyExpires, root: oldRToken.familyRoot});
     return { accessToken, refreshToken };
   }
 
   // Revokes a refresh token family, returns number of deleted documents.
-  async revokeRefreshTokens(refreshTokenRoot: string): Promise<number> {
+  async revokeRefreshTokens(refreshTokenRoot: Types.ObjectId): Promise<number> {
     const deleted = await RefreshToken.deleteMany({ family_root: refreshTokenRoot});
     return deleted.deletedCount;
   }
 }
+
+const instance = AuthService.get();
+
+export { instance as AuthService }

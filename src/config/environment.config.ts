@@ -44,7 +44,7 @@ export const EnvironmentWrapper = (): IEnvironment => {
   }
   const ACCESS_TOKEN_EXPIRATION = parseInt(process.env.ACCESS_TOKEN_EXPIRATION) || 15;
 
-  const ACCESS_TOKEN_ALG = process.env.ACCESS_TOKEN_EXPIRATION || 'HS256';
+  const ACCESS_TOKEN_ALG = process.env.ACCESS_TOKEN_ALG || 'HS256';
 
   if ( !process.env.REFRESH_TOKEN_SECRET ) {
     console.log('REFRESH_TOKEN_SECRET not found.');

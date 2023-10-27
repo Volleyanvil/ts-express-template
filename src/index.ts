@@ -1,8 +1,9 @@
 import http from 'http';
+import { AddressInfo } from 'net';
+import { ConnectOptions } from 'mongoose';
 import { ENV, HOST, PORT, MONGODB_URI } from '@config/environment.config';
 import { createServer } from '@config/express.config';
 import { Logger } from '@config/logger.config'
-import { AddressInfo } from 'net';
 import { DB } from '@config/database.config';
 
 // Add module aliases programmatically
@@ -18,9 +19,13 @@ moduleAlias.addAliases({
   '@services': `${sourcePath}/services`,
 });
 
+// Disable auto indexing in production
+const connOptions: ConnectOptions = {};
+if (ENV === 'production') connOptions.autoIndex = false;
+
 const startServer = async () => {
 
-  DB.connect(MONGODB_URI);
+  DB.connect(MONGODB_URI, connOptions);
   const app = await createServer();
   const server = http.createServer(app).listen({ host: HOST, port: PORT }, () => {
     const addressInfo = server.address() as AddressInfo;

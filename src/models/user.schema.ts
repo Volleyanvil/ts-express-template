@@ -1,14 +1,10 @@
 import { Model, Schema, model } from 'mongoose';
 import * as Bcrypt from 'bcrypt';
 
+
 enum ROLE {
   admin = 'admin',
   user = 'user',
-}
-
-enum STATUS {
-  registered = 'registered',
-  verified = 'verified',
 }
 
 export interface IUser {
@@ -16,25 +12,26 @@ export interface IUser {
   firstName?: string,
   lastName?: string,
   email: string,
-  status: STATUS
+  isActive: boolean
   role: ROLE,
   password: string,
 }
 
 interface IUserMethods {
   checkPassword(password: string): boolean;
+  fullName(): string;
 }
 
 interface IUserQueryHelpers {}
 
 type UserModel = Model<IUser, IUserQueryHelpers, IUserMethods>
 
-export const UserSchema = new Schema<IUser, UserModel, IUserMethods>({
+const UserSchema = new Schema<IUser, UserModel, IUserMethods>({
   username: { type: String, required: true, unique: true },
   firstName: { type: String },
   lastName: { type: String },
   email: { type: String, required: true, unique: true },
-  status: { type: String, enum: STATUS, default: STATUS.registered },
+  isActive: { type: Boolean, default: false },
   role: { type: String, enum: ROLE, default: ROLE.user },
   password: { type: String, select: false },
 },
@@ -42,7 +39,7 @@ export const UserSchema = new Schema<IUser, UserModel, IUserMethods>({
   timestamps: true 
 });
 
-// Replace password filed contents with hash if value has been modified
+// Replace password contents with hash if value has been modified
 UserSchema.pre('save', async function(next) {
   try {
     if (!this.isModified('password')) return next();
@@ -54,8 +51,13 @@ UserSchema.pre('save', async function(next) {
 });
 
 // Compare provided cleartext password with stored hash value
-UserSchema.method('checkPassword', async function(password: string) {
+UserSchema.method('checkPassword', async function checkPassword(password: string): Promise<boolean> {
   return await Bcrypt.compare(password, this.password);
+});
+
+// Compare provided cleartext password with stored hash value
+UserSchema.method('fullName', function fullName(): string {
+  return this.firstName + ' ' + this.lastName;
 });
 
 export const User = model<IUser, UserModel>('User', UserSchema);

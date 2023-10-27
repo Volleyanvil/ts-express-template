@@ -7,28 +7,31 @@ import { AuthRouter } from '@routes/auth.route';
 import { MainRouter } from '@routes/main.route';
 import { UserRouter } from '@routes/user.route';
 import { Auth } from '@config/auth.config';
+import { errorHandler } from '@middlewares/error-handler.middleware';
 
 
 // TODO: Add hpp, helmet (later?), cors options
 
 const createServer = (): express.Application => {
-    const app = express();
+  const app = express();
 
-    app.use(express.urlencoded({ extended:true }));
-    app.use(cookieParser());
-    app.use(cors());
-    app.use(Auth.init());
-    Auth.plug();
-    app.use(express.json());
+  app.use(express.urlencoded({ extended:true }));
+  app.use(cookieParser());
+  app.use(cors());
+  app.use(Auth.init());
+  Auth.plug();
+  app.use(express.json());
 
-    // Disable X-Powered-By HTTP response header
-    app.disable('x-powered-by');
+  // Disable X-Powered-By HTTP response header
+  app.disable('x-powered-by');
 
-    app.use('', new MainRouter().router);
-    app.use('/user', new UserRouter().router);
-    app.use('/auth', new AuthRouter().router);
+  app.use('', new MainRouter().router);
+  app.use('/user', new UserRouter().router);
+  app.use('/auth', new AuthRouter().router);
 
-    return app;
+  app.use(errorHandler);
+
+  return app;
 };
 
 export { createServer };
