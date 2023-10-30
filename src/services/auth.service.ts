@@ -2,6 +2,8 @@ import dayjs from 'dayjs';  // Use Dayjs instead of moment (maintenance mode)
 import * as Jwt from 'jwt-simple';
 import { HydratedDocument, Types } from 'mongoose';
 import { IRefreshToken, RefreshToken } from '@models/refresh-token.schema';
+import { TokenFamily } from '@models/token-family.schema';
+import { User, IUser } from '@models/user.schema';
 import { 
   ACCESS_TOKEN_SECRET, 
   ACCESS_TOKEN_EXPIRATION, 
@@ -10,7 +12,6 @@ import {
   REFRESH_TOKEN_EXPIRATION, 
   REFRESH_TOKEN_FAMILY_EXPIRATION 
 } from '@config/environment.config';
-import { TokenFamily } from '@models/token-family.schema';
 
 
 class AuthService {
@@ -107,6 +108,20 @@ class AuthService {
     const families = await TokenFamily.find({ user: userId }).distinct('_id').exec();
     await RefreshToken.deleteMany({ familyRoot: {$in: families} }).exec();
     await TokenFamily.deleteMany({ _id: {$in: families} }).exec();
+  }
+
+  async jwt(req: any, jwt_payload: {sub: string}, done: (e?: Error, v?: HydratedDocument<IUser>|boolean) => void): Promise<void> {
+    try {
+      const user = await User.findById(jwt_payload.sub);
+      if (user){
+        req.user = user;
+        return done(null, user);
+      } else {
+        return done(null, false);
+      } 
+    } catch (error) {
+      return done(<Error>error, false);
+    }
   }
 
 }
