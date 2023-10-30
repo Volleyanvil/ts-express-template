@@ -131,7 +131,7 @@ class AuthController {
   // NOTE: Admins should also have the ability to revoke users' tokens. This should be implemented separately
 
   // TODO
-  // Revokes one or more refresh token families.
+  // Revokes one or more refresh token families specified in request body.
   async revoke(_req: Request, res: Response): Promise<void> {
     // NOTE: Users should only be able to revoke their own tokens
     // NOTE: One option for implementation is to accept an array of ObjectId strings corresponding to family root tokens.
@@ -146,6 +146,14 @@ class AuthController {
     // Check token ownership before revokation. Do not revoke unowned tokens, log and flag as potential suspicious activity.
     // If Nothing was revoked, respond accordingly
     
+    res.status(500).json({ message: 'Token revokation has not yet been implemented.' })
+  }
+
+  // Revokes all token families for current user
+  async revokeAll(req: Request, res: Response): Promise<void> {
+    // Read user id from req.user
+    // Run AuthService.revokeAll(uid)
+    // Respond 200 OK or throw
     res.status(500).json({ message: 'ID-based token revokation has not yet been implemented.' })
   }
 

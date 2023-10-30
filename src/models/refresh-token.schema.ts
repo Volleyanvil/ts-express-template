@@ -48,6 +48,7 @@ const RefreshTokenSchema = new Schema<IRefreshToken>({
   timestamps: true 
 });
 
+// If token is unused, update token family. 
 RefreshTokenSchema.pre('save', async function(): Promise<void> {
   if (!this.isUsed && this.familyRoot !== undefined) {
     const family = await TokenFamily.findById(this.familyRoot);

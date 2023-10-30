@@ -13,8 +13,6 @@ import {
 import { TokenFamily } from '@models/token-family.schema';
 
 
-// TODO: Handle ENV variables in environment.config and import
-
 class AuthService {
 
   private static instance: AuthService;
@@ -45,15 +43,7 @@ class AuthService {
     const familyExpires = tokenFamily?.exp || now.add(REFRESH_TOKEN_FAMILY_EXPIRATION, 'days').toDate();
     let familyRoot = tokenFamily?.root || undefined;
 
-    if (familyRoot === undefined) {
-      const newFamily = await new TokenFamily({
-        user: userId,
-        expires: familyExpires,
-      }).save();
-      familyRoot = newFamily._id;
-    }
-
-    // Refresh token can also be a hard-to-guess unique string (random bytes)
+    // Generate token string, can also be random data
     const tokenPayload = {
       exp: expires.unix(),
       iat: now.unix(),
@@ -61,13 +51,22 @@ class AuthService {
     }
     const token = Jwt.encode(tokenPayload, REFRESH_TOKEN_SECRET, 'HS256');
 
-    const newRToken = await new RefreshToken({
+    // Generate a new family if not defined
+    if (familyRoot === undefined) {
+      const newFamily = await TokenFamily.create({
+        user: userId,
+        expires: familyExpires,
+      });
+      familyRoot = newFamily._id;
+    }
+
+    const newRToken = await RefreshToken.create({
       token: token, 
       user: userId, 
       expires: expires.toDate(), 
       familyExpires: familyExpires,
       familyRoot: familyRoot,
-    }).save();
+    });
 
     return newRToken;
   }
@@ -86,8 +85,9 @@ class AuthService {
       throw new Error('Refresh token has expired');
     }
 
-    // Delete old token
-    RefreshToken.deleteOne({ _id: oldRToken._id});
+    // Mark old token as used
+    oldRToken.isUsed = true;
+    oldRToken.save();
 
     // Generate new tokens
     const accessToken = await this.generateAccessToken(oldRToken.user);
@@ -95,11 +95,20 @@ class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // Revokes a refresh token family, returns number of deleted documents.
+  // Revokes a refresh token family, returns number of deleted tokens.
   async revokeRefreshTokens(refreshTokenRoot: Types.ObjectId): Promise<number> {
-    const deleted = await RefreshToken.deleteMany({ family_root: refreshTokenRoot});
+    const deleted = await RefreshToken.deleteMany({ familyRoot: refreshTokenRoot }).exec();
+    await TokenFamily.deleteOne({ _id: refreshTokenRoot }).exec();
     return deleted.deletedCount;
   }
+
+  // Revokes 
+  async revokeAll(userId: Types.ObjectId): Promise<void> {
+    const families = await TokenFamily.find({ user: userId }).distinct('_id').exec();
+    await RefreshToken.deleteMany({ familyRoot: {$in: families} }).exec();
+    await TokenFamily.deleteMany({ _id: {$in: families} }).exec();
+  }
+
 }
 
 const instance = AuthService.get();
