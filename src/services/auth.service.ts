@@ -96,20 +96,21 @@ class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // Revokes a refresh token family, returns number of deleted tokens.
+  // Revokes a refresh token family and all related refresh tokens
   async revokeRefreshTokens(refreshTokenRoot: Types.ObjectId): Promise<number> {
     const deleted = await RefreshToken.deleteMany({ familyRoot: refreshTokenRoot }).exec();
     await TokenFamily.deleteOne({ _id: refreshTokenRoot }).exec();
     return deleted.deletedCount;
   }
 
-  // Revokes 
+  // Revokes all refresh tokens for one user
   async revokeAll(userId: Types.ObjectId): Promise<void> {
     const families = await TokenFamily.find({ user: userId }).distinct('_id').exec();
     await RefreshToken.deleteMany({ familyRoot: {$in: families} }).exec();
     await TokenFamily.deleteMany({ _id: {$in: families} }).exec();
   }
 
+  // Verify function for passport-jwt Strategy.
   async jwt(req: any, jwt_payload: {sub: string}, done: (e?: Error, v?: HydratedDocument<IUser>|boolean) => void): Promise<void> {
     try {
       const user = await User.findById(jwt_payload.sub);

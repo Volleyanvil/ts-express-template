@@ -129,7 +129,8 @@ class AuthController {
 
   // Responds with a list of the requesting user's active logins (token families).
   async activeLogins(req: IRequest, res: Response): Promise<void> {
-    const logins = TokenFamily.find({ user:  req.user.id }).populate('current', 'expires').exec();
+    const user = req.user as HydratedDocument<IUser>;
+    const logins = TokenFamily.find({ user:  user.id }).populate('current', 'expires').exec();
     res.status(200).json(logins);
   }
 
