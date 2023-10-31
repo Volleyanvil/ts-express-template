@@ -1,10 +1,13 @@
 import { Request, Response } from 'express';
-import { Error as MongooseError } from 'mongoose';
+import { HydratedDocument, Error as MongooseError } from 'mongoose';
 import createHttpError from 'http-errors';
 
-import { User } from '@server/models/user.schema';
-import { AuthService } from '@services/auth.service';
 import { RefreshToken } from '@models/refresh-token.schema';
+import { TokenFamily } from '@models/token-family.schema';
+import { IUser, User } from '@models/user.schema';
+import { AuthService } from '@services/auth.service';
+import { IRequest } from '@server/interfaces/request.interface';
+
 
 
 class AuthController {
@@ -23,10 +26,11 @@ class AuthController {
   // Creates and authenticates new user
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const newUser = await new User(req.body).save();
-      const accessToken = await AuthService.generateAccessToken(newUser._id);
-      const refreshToken = await AuthService.generateRefreshToken(newUser._id);
-      delete newUser.password;
+      const newUser = await User.create(req.body);
+      // Created user has to be queried again to deselect password field. delete does not work.
+      const user = await User.findById(newUser._id);
+      const accessToken = await AuthService.generateAccessToken(user._id);
+      const refreshToken = await AuthService.generateRefreshToken(user._id);
       res.status(201)
       .cookie('refreshToken', refreshToken.token, {
         httpOnly: true, 
@@ -34,11 +38,10 @@ class AuthController {
         secure: true, 
         path: '/auth'
       })
-      .json({ user: newUser, accessToken: accessToken });
+      .json({ user: user, accessToken: accessToken });
     } catch (err) {
       // TODO: Move error handling to dedicated middleware
       // TODO: Handle validation errors by type and limit message contents
-      //
       if (err instanceof MongooseError.ValidationError) {
         // https://mongoosejs.com/docs/api/error.html#Error.ValidationError
         const error = err as MongooseError.ValidationError;
@@ -89,20 +92,29 @@ class AuthController {
   }
 
   // Revokes current refresh token and token family
-  async logout(req: Request, res: Response, next: (err: Error) => void): Promise<void> {
-    // (?) TODO: Verify that requesting user matches RT owner
+  async logout(req: IRequest, res: Response, next: (err: Error) => void): Promise<void> {
     if (!req.cookies.refreshToken) return next(createHttpError(400, 'Nothing to revoke'));
+    
     const refreshToken = await RefreshToken.findOne({token: req.cookies.refreshToken}).exec();
     if (!refreshToken) return next(createHttpError(400, 'Invalid refresh token'));
+
+    const user = req.user as HydratedDocument<IUser>;
+    if (refreshToken.user !== user._id) return next(createHttpError(403, 'Invalid refresh token'));
+
     await AuthService.revokeRefreshTokens(refreshToken.familyRoot);
     res.status(200).json({message: 'Logged out successfully'});
   }
 
   // Generate new access token against a refresh token, rotate refresh token.
-  async refresh(req: Request, res: Response, next: (err: Error) => void): Promise<void> {
+  async refresh(req: IRequest, res: Response, next: (err: Error) => void): Promise<void> {
     if (!req.cookies.refreshToken) return next(createHttpError(400, 'Missing refresh token'));
+
     const oldRefreshToken = await RefreshToken.findOne({token: req.cookies.refreshToken}).exec();
-    if (!oldRefreshToken) return next(createHttpError(400, 'Invalid refresh token'));
+    if (!oldRefreshToken) return next(createHttpError(404, 'Refresh token not found'));
+
+    const user = req.user as HydratedDocument<IUser>;
+    if (oldRefreshToken.user !== user._id) return next(createHttpError(403, 'Invalid refresh token'));
+
     const { accessToken, refreshToken } = await AuthService.rotateToken(oldRefreshToken);
 
     res.status(200)
@@ -115,17 +127,10 @@ class AuthController {
     .json({ accessToken: accessToken });
   }
 
-  // TODO
-  // Generates a list of user's active sessions (refresh token families)
-  async activeSessions(_req: Request, res: Response): Promise<void> {
-    // Find TokenFamily objects for current user. Populate current.expires to include token's expiration.
-    // DO NOT INCLUDE TOKEN FIELDS' VALUES
-    // Return an array of token families.
-
-    // To implement without token families, create a compound index of familyRoot and isUsed for RefreshToken
-    // Each family should only have one unused token.
-
-    res.status(500).json({ message: 'Active session listing is not implemented yet.' })
+  // Responds with a list of the requesting user's active logins (token families).
+  async activeLogins(req: IRequest, res: Response): Promise<void> {
+    const logins = TokenFamily.find({ user:  req.user.id }).populate('current', 'expires').exec();
+    res.status(200).json(logins);
   }
 
   // NOTE: Admins should also have the ability to revoke users' tokens. This should be implemented separately
@@ -151,10 +156,9 @@ class AuthController {
 
   // Revokes all token families for current user
   async revokeAll(req: Request, res: Response): Promise<void> {
-    // Read user id from req.user
-    // Run AuthService.revokeAll(uid)
-    // Respond 200 OK or throw
-    res.status(500).json({ message: 'ID-based token revokation has not yet been implemented.' })
+    const user = req.user as HydratedDocument<IUser>;
+    await AuthService.revokeAll(user._id);
+    res.status(200).json({ message: 'All logins terminated succesfully' })
   }
 
   // TODO

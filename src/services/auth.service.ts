@@ -74,7 +74,7 @@ class AuthService {
 
   // Rotates refresh token, returns new token pair or revokes refresh tokens and throws if provided token is invalid
   async rotateToken(oldRToken: HydratedDocument<IRefreshToken>): Promise<{ accessToken: string, refreshToken: HydratedDocument<IRefreshToken> }> {
-     // Revoke used token, throw error. NOTE: should be logged as potential replay attack.
+     // TODO: Log as suspicious activity / possible replay attack
     if (oldRToken.isUsed) {
       this.revokeRefreshTokens(oldRToken.familyRoot);
       throw new Error('Token has been used');
