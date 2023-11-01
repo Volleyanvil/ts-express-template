@@ -9,7 +9,6 @@ import { AuthService } from '@services/auth.service';
 import { IRequest } from '@server/interfaces/request.interface';
 
 
-
 class AuthController {
 
   private static instance: AuthController;
@@ -30,10 +29,9 @@ class AuthController {
   async register(req: IRequest, res: Response): Promise<void> {
     try {
       const newUser = await User.create(req.body);
-      // Created user has to be queried again to deselect password field. delete does not work.
-      const user = await User.findById(newUser._id);
-      const accessToken = await AuthService.generateAccessToken(user._id);
-      const refreshToken = await AuthService.generateRefreshToken(user._id);
+      const accessToken = await AuthService.generateAccessToken(newUser._id);
+      const refreshToken = await AuthService.generateRefreshToken(newUser._id);
+      newUser.password = undefined; // Exclude password from res
       res.status(201)
       .cookie('refreshToken', refreshToken.token, {
         httpOnly: true, 
@@ -41,7 +39,7 @@ class AuthController {
         secure: true, 
         path: '/auth'
       })
-      .json({ user: user, accessToken: accessToken });
+      .json({ user: newUser, accessToken: accessToken });
     } catch (err) {
       // TODO: Move error handling to dedicated middleware
       // TODO: Handle validation errors by type and limit message contents
@@ -75,13 +73,16 @@ class AuthController {
     const user = await User.findOne({$or: [
       {username: username},
       {email: email}
-    ]}).select('password').exec();
+    ]}).select('username firstName lastrName email isActive role password').exec();
 
     if (!user) {
       return next(createHttpError(400, 'Please check that the username or email is correct'));
     } else if (password && user.checkPassword(password) === false) {
       return next(createHttpError(400, 'Incorrect password'));
     }
+
+    // Exclude password from res
+    user.password = undefined;
 
     const accessToken = await AuthService.generateAccessToken(user._id);
     const refreshToken = await AuthService.generateRefreshToken(user._id);
@@ -118,8 +119,8 @@ class AuthController {
     const oldRefreshToken = await RefreshToken.findOne({token: req.cookies.refreshToken}).exec();
     if (!oldRefreshToken) return next(createHttpError(404, 'Refresh token not found'));
 
-    const user = req.user as HydratedDocument<IUser>;
-    if (oldRefreshToken.user !== user._id) return next(createHttpError(403, 'Invalid refresh token'));
+    const user = await User.findById(oldRefreshToken.user).lean();
+    if (!user) return next(createHttpError(403, 'Invalid refresh token: User not found'));
 
     const { accessToken, refreshToken } = await AuthService.rotateToken(oldRefreshToken);
 
@@ -137,7 +138,7 @@ class AuthController {
   // Responds with a list of the requesting user's active logins (token families).
   async activeLogins(req: IRequest, res: Response): Promise<void> {
     const user = req.user as HydratedDocument<IUser>;
-    const logins = TokenFamily.find({ user:  user.id }).populate('current', 'expires').exec();
+    const logins = await TokenFamily.find({ user: user._id }).populate('current', 'expires').exec();
     res.status(200).json({ activeLogins: logins });
   }
 

@@ -2,7 +2,7 @@ import { Model, Schema, model } from 'mongoose';
 import * as Bcrypt from 'bcrypt';
 
 
-enum ROLE {
+export enum ROLE {
   admin = 'admin',
   user = 'user',
 }
