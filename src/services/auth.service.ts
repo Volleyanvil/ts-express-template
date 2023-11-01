@@ -17,8 +17,10 @@ import {
 class AuthService {
 
   private static instance: AuthService;
+  
 
   constructor() {}
+
 
   static get(): AuthService {
     if (!AuthService.instance) {
@@ -26,6 +28,7 @@ class AuthService {
     }
     return AuthService.instance;
   }
+
 
   // Generates an returns a new JWT access token for user
   async generateAccessToken (userId: Types.ObjectId, duration: number = null): Promise<string> {
@@ -36,6 +39,7 @@ class AuthService {
     }
     return Jwt.encode(tokenPayload, ACCESS_TOKEN_SECRET, ACCESS_TOKEN_ALG as Jwt.TAlgorithm)
   }
+
 
   // Generates and returns a new refresh token for user with optional params when using an existing token family.
   async generateRefreshToken(userId: Types.ObjectId, tokenFamily?: { exp: Date, root: Types.ObjectId }): Promise<HydratedDocument<IRefreshToken>> {
@@ -53,7 +57,7 @@ class AuthService {
     const token = Jwt.encode(tokenPayload, REFRESH_TOKEN_SECRET, 'HS256');
 
     // Generate a new family if not defined
-    if (familyRoot === undefined) {
+    if (typeof(familyRoot) === 'undefined') {
       const newFamily = await TokenFamily.create({
         user: userId,
         expires: familyExpires,
@@ -71,6 +75,7 @@ class AuthService {
 
     return newRToken;
   }
+
 
   // Rotates refresh token, returns new token pair or revokes refresh tokens and throws if provided token is invalid
   async rotateToken(oldRToken: HydratedDocument<IRefreshToken>): Promise<{ accessToken: string, refreshToken: HydratedDocument<IRefreshToken> }> {
@@ -96,19 +101,28 @@ class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // Revokes a refresh token family and all related refresh tokens
-  async revokeRefreshTokens(refreshTokenRoot: Types.ObjectId): Promise<number> {
-    const deleted = await RefreshToken.deleteMany({ familyRoot: refreshTokenRoot }).exec();
-    await TokenFamily.deleteOne({ _id: refreshTokenRoot }).exec();
-    return deleted.deletedCount;
+
+  // Revokes one or multiple refresh token families and all related refresh tokens
+  async revokeRefreshTokens(familyIds: Types.ObjectId|Types.ObjectId[]): Promise<number> {
+    if (Array.isArray(familyIds)) {
+      const deleted = await RefreshToken.deleteMany({ familyRoot: {$in: familyIds} }).exec();
+      await TokenFamily.deleteOne({ _id: familyIds }).exec();
+      return deleted.deletedCount;
+    } else {
+      const deleted = await RefreshToken.deleteMany({ familyRoot: familyIds }).exec();
+      await TokenFamily.deleteOne({ _id: familyIds }).exec();
+      return deleted.deletedCount;
+    }
   }
+
 
   // Revokes all refresh tokens for one user
   async revokeAll(userId: Types.ObjectId): Promise<void> {
-    const families = await TokenFamily.find({ user: userId }).distinct('_id').exec();
-    await RefreshToken.deleteMany({ familyRoot: {$in: families} }).exec();
-    await TokenFamily.deleteMany({ _id: {$in: families} }).exec();
+    const familyIds = await TokenFamily.find({ user: userId }).distinct('_id').exec();
+    await RefreshToken.deleteMany({ familyRoot: {$in: familyIds} }).exec();
+    await TokenFamily.deleteMany({ _id: {$in: familyIds} }).exec();
   }
+
 
   // Verify function for passport-jwt Strategy.
   async jwt(req: any, jwt_payload: {sub: string}, done: (e?: Error, v?: HydratedDocument<IUser>|boolean) => void): Promise<void> {
