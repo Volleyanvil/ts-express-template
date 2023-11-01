@@ -3,7 +3,7 @@ import { HydratedDocument, Error as MongooseError, Types as MongooseTypes } from
 import createHttpError from 'http-errors';
 
 import { RefreshToken } from '@models/refresh-token.schema';
-import { ITokenFamily, TokenFamily } from '@models/token-family.schema';
+import { TokenFamily } from '@models/token-family.schema';
 import { IUser, User } from '@models/user.schema';
 import { AuthService } from '@services/auth.service';
 import { IRequest } from '@server/interfaces/request.interface';
