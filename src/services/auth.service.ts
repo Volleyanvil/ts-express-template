@@ -2,6 +2,8 @@ import dayjs from 'dayjs';  // Use Dayjs instead of moment (maintenance mode)
 import * as Jwt from 'jwt-simple';
 import { HydratedDocument, Types } from 'mongoose';
 import { IRefreshToken, RefreshToken } from '@models/refresh-token.schema';
+import { TokenFamily } from '@models/token-family.schema';
+import { User, IUser } from '@models/user.schema';
 import { 
   ACCESS_TOKEN_SECRET, 
   ACCESS_TOKEN_EXPIRATION, 
@@ -10,16 +12,15 @@ import {
   REFRESH_TOKEN_EXPIRATION, 
   REFRESH_TOKEN_FAMILY_EXPIRATION 
 } from '@config/environment.config';
-import { TokenFamily } from '@models/token-family.schema';
 
-
-// TODO: Handle ENV variables in environment.config and import
 
 class AuthService {
 
   private static instance: AuthService;
+  
 
   constructor() {}
+
 
   static get(): AuthService {
     if (!AuthService.instance) {
@@ -27,6 +28,7 @@ class AuthService {
     }
     return AuthService.instance;
   }
+
 
   // Generates an returns a new JWT access token for user
   async generateAccessToken (userId: Types.ObjectId, duration: number = null): Promise<string> {
@@ -38,6 +40,7 @@ class AuthService {
     return Jwt.encode(tokenPayload, ACCESS_TOKEN_SECRET, ACCESS_TOKEN_ALG as Jwt.TAlgorithm)
   }
 
+
   // Generates and returns a new refresh token for user with optional params when using an existing token family.
   async generateRefreshToken(userId: Types.ObjectId, tokenFamily?: { exp: Date, root: Types.ObjectId }): Promise<HydratedDocument<IRefreshToken>> {
     const now = dayjs();
@@ -45,15 +48,7 @@ class AuthService {
     const familyExpires = tokenFamily?.exp || now.add(REFRESH_TOKEN_FAMILY_EXPIRATION, 'days').toDate();
     let familyRoot = tokenFamily?.root || undefined;
 
-    if (familyRoot === undefined) {
-      const newFamily = await new TokenFamily({
-        user: userId,
-        expires: familyExpires,
-      }).save();
-      familyRoot = newFamily._id;
-    }
-
-    // Refresh token can also be a hard-to-guess unique string (random bytes)
+    // Generate token string, can also be random data
     const tokenPayload = {
       exp: expires.unix(),
       iat: now.unix(),
@@ -61,20 +56,30 @@ class AuthService {
     }
     const token = Jwt.encode(tokenPayload, REFRESH_TOKEN_SECRET, 'HS256');
 
-    const newRToken = await new RefreshToken({
+    // Generate a new family if not defined
+    if (typeof(familyRoot) === 'undefined') {
+      const newFamily = await TokenFamily.create({
+        user: userId,
+        expires: familyExpires,
+      });
+      familyRoot = newFamily._id;
+    }
+
+    const newRToken = await RefreshToken.create({
       token: token, 
       user: userId, 
       expires: expires.toDate(), 
       familyExpires: familyExpires,
       familyRoot: familyRoot,
-    }).save();
+    });
 
     return newRToken;
   }
 
+
   // Rotates refresh token, returns new token pair or revokes refresh tokens and throws if provided token is invalid
   async rotateToken(oldRToken: HydratedDocument<IRefreshToken>): Promise<{ accessToken: string, refreshToken: HydratedDocument<IRefreshToken> }> {
-     // Revoke used token, throw error. NOTE: should be logged as potential replay attack.
+     // TODO: Log as suspicious activity / possible replay attack
     if (oldRToken.isUsed) {
       this.revokeRefreshTokens(oldRToken.familyRoot);
       throw new Error('Token has been used');
@@ -86,8 +91,9 @@ class AuthService {
       throw new Error('Refresh token has expired');
     }
 
-    // Delete old token
-    RefreshToken.deleteOne({ _id: oldRToken._id});
+    // Mark old token as used
+    oldRToken.isUsed = true;
+    oldRToken.save();
 
     // Generate new tokens
     const accessToken = await this.generateAccessToken(oldRToken.user);
@@ -95,11 +101,44 @@ class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // Revokes a refresh token family, returns number of deleted documents.
-  async revokeRefreshTokens(refreshTokenRoot: Types.ObjectId): Promise<number> {
-    const deleted = await RefreshToken.deleteMany({ family_root: refreshTokenRoot});
-    return deleted.deletedCount;
+
+  // Revokes one or multiple refresh token families and all related refresh tokens
+  async revokeRefreshTokens(familyIds: Types.ObjectId|Types.ObjectId[]): Promise<number> {
+    if (Array.isArray(familyIds)) {
+      const deleted = await RefreshToken.deleteMany({ familyRoot: {$in: familyIds} }).exec();
+      await TokenFamily.deleteOne({ _id: familyIds }).exec();
+      return deleted.deletedCount;
+    } else {
+      const deleted = await RefreshToken.deleteMany({ familyRoot: familyIds }).exec();
+      await TokenFamily.deleteOne({ _id: familyIds }).exec();
+      return deleted.deletedCount;
+    }
   }
+
+
+  // Revokes all refresh tokens for one user
+  async revokeAll(userId: Types.ObjectId): Promise<void> {
+    const familyIds = await TokenFamily.find({ user: userId }).distinct('_id').exec();
+    await RefreshToken.deleteMany({ familyRoot: {$in: familyIds} }).exec();
+    await TokenFamily.deleteMany({ _id: {$in: familyIds} }).exec();
+  }
+
+
+  // Verify function for passport-jwt Strategy.
+  async jwt(req: any, jwt_payload: {sub: string}, done: (e?: Error, v?: HydratedDocument<IUser>|boolean) => void): Promise<void> {
+    try {
+      const user = await User.findById(jwt_payload.sub);
+      if (user){
+        req.user = user;
+        return done(null, user);
+      } else {
+        return done(null, false);
+      } 
+    } catch (error) {
+      return done(<Error>error, false);
+    }
+  }
+
 }
 
 const instance = AuthService.get();

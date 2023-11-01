@@ -40,7 +40,7 @@ const RefreshTokenSchema = new Schema<IRefreshToken>({
   token: { type: String, required: true, unique: true, index: true },
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   isUsed: { type: Boolean, default: false },
-  expires: { type: Date, required: true },
+  expires: { type: Date, required: true , expires: '1h'},
   familyExpires: { type: Date, required: true },
   familyRoot: { type: Schema.Types.ObjectId, ref: 'TokenFamily', default: undefined}
 },
@@ -48,6 +48,7 @@ const RefreshTokenSchema = new Schema<IRefreshToken>({
   timestamps: true 
 });
 
+// If token is unused, update token family. 
 RefreshTokenSchema.pre('save', async function(): Promise<void> {
   if (!this.isUsed && this.familyRoot !== undefined) {
     const family = await TokenFamily.findById(this.familyRoot);
