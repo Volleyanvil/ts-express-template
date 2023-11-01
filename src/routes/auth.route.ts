@@ -20,7 +20,7 @@ export class AuthRouter {
     .post(AuthController.refresh);
 
     this.router.route('/active-logins')
-    .post(passport.authenticate('jwt', {session: false}), AuthController.activeLogins);
+    .get(passport.authenticate('jwt', {session: false}), AuthController.activeLogins);
 
     this.router.route('/revoke-logins')
     .post(passport.authenticate('jwt', {session: false}), AuthController.revoke);
