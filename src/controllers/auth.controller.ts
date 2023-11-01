@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { HydratedDocument, Error as MongooseError, Types as MongooseTypes } from 'mongoose';
 import createHttpError from 'http-errors';
 
@@ -27,7 +27,7 @@ class AuthController {
 
 
   // Creates and authenticates new user
-  async register(req: Request, res: Response): Promise<void> {
+  async register(req: IRequest, res: Response): Promise<void> {
     try {
       const newUser = await User.create(req.body);
       // Created user has to be queried again to deselect password field. delete does not work.
@@ -66,7 +66,7 @@ class AuthController {
 
 
   // Authenticates user with credentials
-  async login(req: Request, res: Response, next: (err?: Error) => void): Promise<void> {
+  async login(req: IRequest, res: Response, next: (err?: Error) => void): Promise<void> {
     const {username, email, password } = req.body;
 
     if (!username && !email) return next(createHttpError(400, 'Please provide a valid username or email to log in'));
@@ -165,7 +165,7 @@ class AuthController {
 
 
   // Revokes all token families for current user
-  async revokeAll(req: Request, res: Response): Promise<void> {
+  async revokeAll(req: IRequest, res: Response): Promise<void> {
     const user = req.user as HydratedDocument<IUser>;
     await AuthService.revokeAll(user._id);
     res.status(200).json({ message: 'All logins terminated succesfully' })
@@ -174,7 +174,7 @@ class AuthController {
 
   // TODO
   // Verify user's email address
-  async verifyEmail(_req: Request, res: Response): Promise<void> {
+  async verifyEmail(_req: IRequest, res: Response): Promise<void> {
     // Using a mailer event:
     // > Send user a confirmation link containing a temporary, statelessly veriafiable token with a claim to subject user
     // In controller:
@@ -186,7 +186,7 @@ class AuthController {
 
 
     // TODO
-    async resetPassword(_req: Request, res: Response): Promise<void> {
+    async resetPassword(_req: IRequest, res: Response): Promise<void> {
       res.status(500).send('Password resetting has not yet been implemented.');
     }  
 
