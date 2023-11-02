@@ -33,7 +33,7 @@ const UserSchema = new Schema<IUser, UserModel, IUserMethods>({
   email: { type: String, required: true, unique: true },
   isActive: { type: Boolean, default: false },
   role: { type: String, enum: ROLE, default: ROLE.user },
-  password: { type: String, select: false },
+  password: { type: String, required:true, select: false },
 },
 { 
   timestamps: true 

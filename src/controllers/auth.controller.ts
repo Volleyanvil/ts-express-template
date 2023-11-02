@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { HydratedDocument, Error as MongooseError, Types as MongooseTypes } from 'mongoose';
+import { HydratedDocument, Types as MongooseTypes } from 'mongoose';
 import createHttpError from 'http-errors';
 
 import { RefreshToken } from '@models/refresh-token.schema';
@@ -26,12 +26,14 @@ class AuthController {
 
 
   // Creates and authenticates new user
-  async register(req: IRequest, res: Response): Promise<void> {
+  async register(req: IRequest, res: Response, next: (err?: Error) => void): Promise<void> {
+    // Password validation here
     try {
+      if (req.body.password && !AuthService.validatePassword(req.body.password)) return next (createHttpError(400, 'Password must be at least 12 characters long and include at leas one upper case letter, lower case letter, number and non-word character'));
       const newUser = await User.create(req.body);
       const accessToken = await AuthService.generateAccessToken(newUser._id);
       const refreshToken = await AuthService.generateRefreshToken(newUser._id);
-      newUser.password = undefined; // Exclude password from res
+      newUser.password = undefined;  // Exclude password field from document
       res.status(201)
       .cookie('refreshToken', refreshToken.token, {
         httpOnly: true, 
@@ -41,24 +43,7 @@ class AuthController {
       })
       .json({ user: newUser, accessToken: accessToken });
     } catch (err) {
-      // TODO: Move error handling to dedicated middleware
-      // TODO: Handle validation errors by type and limit message contents
-      if (err instanceof MongooseError.ValidationError) {
-        // https://mongoosejs.com/docs/api/error.html#Error.ValidationError
-        const error = err as MongooseError.ValidationError;
-        const errors = {};
-        Object.keys(error.errors).forEach((key) => {
-          errors[key] = error.errors[key].message;
-        })
-        console.log(err.name, ' - ', err.errors);
-        res.status(400).json(errors);
-      } else if (err instanceof Error) {
-        const error = err as Error;
-        console.log(error.name, ' - ', error.message);
-        res.status(500).json({message: 'Internal server error'});
-      } else {
-        console.log('Unkown error: ', err);
-      }
+      return next(<any>err);
     }
   }
 
@@ -81,11 +66,9 @@ class AuthController {
       return next(createHttpError(400, 'Incorrect password'));
     }
 
-    // Exclude password from res
-    user.password = undefined;
-
     const accessToken = await AuthService.generateAccessToken(user._id);
     const refreshToken = await AuthService.generateRefreshToken(user._id);
+    user.password = undefined;  // Exclude password field from document
     res.status(200)
     .cookie('refreshToken', refreshToken.token, {
       httpOnly: true, 
@@ -145,7 +128,6 @@ class AuthController {
 
   // NOTE: Admins should have a separate tool/interface to revoke tokens for a specified user
 
-  // TODO
   // Accepts an array of token family ids and revokes related refresh tokens. 
   async revoke(req: IRequest, res: Response, next: (err: Error) => void): Promise<void> {
     const user = req.user as HydratedDocument<IUser>;
@@ -177,19 +159,27 @@ class AuthController {
   // Verify user's email address
   async verifyEmail(_req: IRequest, res: Response): Promise<void> {
     // Using a mailer event:
-    // > Send user a confirmation link containing a temporary, statelessly veriafiable token with a claim to subject user
-    // In controller:
-    // > Decode token, verify token claims and user eligibility for email confirmation
+    // > Send user a confirmation link containing a short-lived, signed token
+    // > Decode and and verify token and user eligibility for email confirmation
     // > Update user email confirmation status
-
     res.status(500).send('Email verification has not yet been implemented.');
   }
 
 
-    // TODO
-    async resetPassword(_req: IRequest, res: Response): Promise<void> {
-      res.status(500).send('Password resetting has not yet been implemented.');
-    }  
+  // TODO
+  // Reset user's password
+  async resetPassword(_req: IRequest, res: Response): Promise<void> {
+    // Option A:
+    // Send user a reset link containing a short-lived, scoped token
+    // When the token is succesfully used, update the user's password and revoke all logins
+    // Option B:
+    // Set a random temporary password, send it to the user, revoke sessions
+    // Extra(B): Add a recovery flag to the user model which is set when requesting a password reset/recovery
+    //           Users are directed to change their temp password to reset the flag.
+    //           While the flag is set, prevent access to protected resources.
+    // Verified email only
+    res.status(500).send('Password resetting has not yet been implemented.');
+  }  
 
 }
 
