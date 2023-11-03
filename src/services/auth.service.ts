@@ -124,6 +124,18 @@ class AuthService {
   }
 
 
+  // Password length & complexity validation
+  validatePassword(password: string): boolean {
+    // Further development, add password min length and regex to .env
+    const passwordRx = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*\W)/;
+    if (password.length >= 12 && passwordRx.test(password)) {
+      return true
+    } else {
+      return false;
+    }
+  }
+
+
   // Verify function for passport-jwt Strategy.
   async jwt(req: any, jwt_payload: {sub: string}, done: (e?: Error, v?: HydratedDocument<IUser>|boolean) => void): Promise<void> {
     try {
