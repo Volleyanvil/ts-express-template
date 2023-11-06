@@ -7,7 +7,7 @@ import { AuthRouter } from '@routes/auth.route';
 import { MainRouter } from '@routes/main.route';
 import { UserRouter } from '@routes/user.route';
 import { Auth } from '@config/auth.config';
-import { errorHandler } from '@middlewares/error-handler.middleware';
+import { ErrorHandler } from '@middlewares/error-handler.middleware';
 
 
 // TODO: Add hpp, helmet (later?), cors options
@@ -29,7 +29,7 @@ const createServer = (): express.Application => {
   app.use('/user', new UserRouter().router);
   app.use('/auth', new AuthRouter().router);
 
-  app.use(errorHandler);
+  app.use(ErrorHandler.log);
 
   return app;
 };
