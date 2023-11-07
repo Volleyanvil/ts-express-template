@@ -1,5 +1,5 @@
 import path from 'path';
-const rootDirector = path.resolve(__dirname);
+const rootDirectory = path.resolve(__dirname);
 
 export default {
   clearMocks: true,
@@ -22,33 +22,36 @@ export default {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
     // Define module path aliases from tsconfig.json
-    '@server(.*)$': `${rootDirector}/src$1`,
-    '@config(.*)$': `${rootDirector}/src/config$1`,
-    '@tests(.*)$': `${rootDirector}/test$1`,
-    '@routes(.*)$': `${rootDirector}/src/routes$1`,
-    '@controllers(.*)$': `${rootDirector}/src/controllers$1`,
-    '@middlewares(.*)$': `${rootDirector}/src/middlewares$1`,
-    '@models(.*)$': `${rootDirector}/src/models$1`,
-    '@services(.*)$': `${rootDirector}/src/services$1`,
+    '@server(.*)$': `${rootDirectory}/src$1`,
+    '@config(.*)$': `${rootDirectory}/src/config$1`,
+    '@tests(.*)$': `${rootDirectory}/test$1`,
+    '@routes(.*)$': `${rootDirectory}/src/routes$1`,
+    '@controllers(.*)$': `${rootDirectory}/src/controllers$1`,
+    '@middlewares(.*)$': `${rootDirectory}/src/middlewares$1`,
+    '@models(.*)$': `${rootDirectory}/src/models$1`,
+    '@services(.*)$': `${rootDirectory}/src/services$1`,
   },
   reporters: [
     'default',
     [
       path.resolve(__dirname, 'node_modules', 'jest-html-reporter'),
       {
-        pageTitle: 'Demo test Report',
+        pageTitle: 'Unit test Report',
         outputPath: 'test-report.html',
       },
     ],
   ],
-  rootDir: rootDirector,
-  roots: [rootDirector],
-  setupFilesAfterEnv: [`${rootDirector}/test/setup.ts`],
+  rootDir: rootDirectory,
+  roots: [rootDirectory],
+  setupFilesAfterEnv: [`${rootDirectory}/test/setup.ts`],
   testPathIgnorePatterns: [
-    '/node_modules/',
+    '<rootDir>/node_modules',
     '<rootDir>/build',
-    `${rootDirector}/test/fixtures`,
-    `${rootDirector}/test/setup.ts`,
+    '<rootDir>/coverage',
+    '<rootDir>/jenkins',
+    '<rootDir>/logs',
+    `${rootDirectory}/test/fixtures`,
+    `${rootDirectory}/test/setup.ts`,
   ],
   transform: {
     // Define filename patterns for testing frameworks
@@ -56,5 +59,5 @@ export default {
       tsconfig: path.resolve(__dirname, 'tsconfig.json'),
     }],
   },
-  testRegex: ['((/test/.*)|(\\.|/)(test|spec))\\.tsx?$'], // Define test file syntax
+  testRegex: ['(/test/.*|(\\.|/))\\.(spec|test).tsx?$'], // Define test file syntax
 };
